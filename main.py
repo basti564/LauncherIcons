@@ -248,4 +248,4 @@ if __name__ == "__main__":
     except FileNotFoundError:
         existing_oculus_apps = []
 
-    #fetch_oculus_apps_with_covers(existing_oculus_apps)
+    fetch_oculus_apps_with_covers(existing_oculus_apps)
