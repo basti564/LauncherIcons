@@ -9,4 +9,4 @@ Repo for Pico and Oculus Launcher Icons
 - oculus_square
 - oculus_portrait
 ## Planned Features
-- download cover images for applab & unlisted apps
+- download cover images for applab, unlisted and SideQuest apps
