@@ -215,8 +215,8 @@ def fetch_pico_covers(app_data):
                 data = response.json()
                 square_url = data["data"]["cover"]["square"]
                 landscape_url = data["data"]["cover"]["landscape"]
-                square_filename = f"pico_square/{app['packageName']}.jpg"
-                landscape_filename = f"pico_landscape/{app['packageName']}.jpg"
+                square_filename = f"pico_square/{app['packageName']}.png"
+                landscape_filename = f"pico_landscape/{app['packageName']}.png"
                 square_filenames.append(square_filename)
                 landscape_filenames.append(landscape_filename)
                 executor.submit(download_image, square_url, square_filename)
@@ -248,4 +248,4 @@ if __name__ == "__main__":
     except FileNotFoundError:
         existing_oculus_apps = []
 
-    fetch_oculus_apps_with_covers(existing_oculus_apps)
+    #fetch_oculus_apps_with_covers(existing_oculus_apps)
