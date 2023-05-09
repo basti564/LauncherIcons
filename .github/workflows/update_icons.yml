@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: '3.x'
 
@@ -30,4 +30,4 @@ jobs:
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git config --global user.name "GitHub Actions Bot"
         git add .
-        git diff-index --quiet HEAD || git commit -m "Update icons" && git push
+        git diff-index --quiet HEAD || git commit -m "Update icons" && git push https://${{ secrets.GH_ACTIONS_BOT_TOKEN }}@github.com/basti564/LauncherIcons.git
