@@ -31,6 +31,7 @@ def merge_apps(existing_apps, new_apps):
 
 def fetch_pico_apps(existing_apps):
     logging.info("Fetching Pico apps...")
+
     pico_options = {
         "url": "https://appstore-us.picovr.com/api/app/v1/section/info",
         "method": "POST",
@@ -48,8 +49,11 @@ def fetch_pico_apps(existing_apps):
         nonlocal page, has_more, app_data
         pico_options["params"]["page"] = str(page)
 
+        logging.info(f"Fetching Pico apps from page {page}")
+
         response = session.request(**pico_options)
         response_data = response.json()
+
         new_apps = [
             dict(
                 app,
@@ -60,9 +64,10 @@ def fetch_pico_apps(existing_apps):
             for app in response_data["data"]["items"]
             if app.get("package_name")
         ]
-        app_data.extend(new_apps)
 
+        app_data.extend(new_apps)
         has_more = response_data["data"]["has_more"]
+
         if has_more:
             page += 1
             fetch_apps()
@@ -70,12 +75,11 @@ def fetch_pico_apps(existing_apps):
     page = 1
     has_more = True
     app_data = []
+
     fetch_apps()
 
-    # Merge the existing and new data
     merged_data = merge_apps(existing_apps, app_data)
 
-    # Write the updated data to the pico_apps.json file
     with open("pico_apps.json", "w") as f:
         json.dump(merged_data, f)
 
@@ -232,6 +236,148 @@ def fetch_pico_covers(app_data):
     logging.info("All Pico app covers downloaded.")
 
 
+def fetch_viveport_covers(existing_apps):
+    logging.info("Fetching Viveport app covers...")
+
+    # Folders for different thumbnail sizes
+    small_folder = "viveport_small"
+    medium_folder = "viveport_medium"
+    large_folder = "viveport_large"
+    square_folder = "viveport_square"
+
+    os.makedirs(small_folder, exist_ok=True)
+    os.makedirs(medium_folder, exist_ok=True)
+    os.makedirs(large_folder, exist_ok=True)
+    os.makedirs(square_folder, exist_ok=True)
+
+    # GraphQL query and variables
+    graphql_query = '''
+    query getProduct(
+        $category_id: String
+        $app_type: [String]
+        $sortCondition: ProductAttributeSortInput
+        $keyword: String
+        $media_type: [String]
+        $isSubscription: [String]
+        $prod_type: [String]
+        $clientType: String
+        $pageSize: Int
+        $currentPage: Int
+    ) {
+        products(
+            filter: {
+                category_id: { eq: $category_id }
+                app_type: { in: $app_type }
+                media_type: { in: $media_type }
+                is_subscription: { in: $isSubscription }
+                prod_type: { in: $prod_type }
+            }
+            sort: $sortCondition
+            search: $keyword
+            client_type: $clientType
+            pageSize: $pageSize
+            currentPage: $currentPage
+        ) {
+            total_count
+            page_info {
+                total_pages
+            }
+            items {
+                sku
+            }
+        }
+    }
+    '''
+
+    graphql_variables = {
+        "category_id": 277,
+        "app_type": [
+            "5"
+        ],
+        "sortCondition": {
+            "position": "DESC"
+        },
+        "keyword": "",
+        "media_type": [
+            "330",
+            "331"
+        ],
+        "isSubscription": [
+            "0",
+            "1"
+        ],
+        "prod_type": [
+            "375",
+            "377"
+        ],
+        "clientType": "desktopbrowser",
+        "pageSize": 24,
+        "currentPage": 1
+    }
+
+    graphql_url = "https://www.viveport.com/graphql"
+    headers = {"Content-Type": "application/json"}
+
+    # Fetch app IDs
+    app_ids = []
+    while True:
+        response = session.post(graphql_url, json={"query": graphql_query, "variables": graphql_variables}, headers=headers)
+        response_data = response.json()
+
+        app_ids += [item["sku"] for item in response_data["data"]["products"]["items"]]
+
+        logging.info(f"Fetched app IDs from page {graphql_variables['currentPage']} of {response_data['data']['products']['page_info']['total_pages']}")
+
+        total_pages = response_data["data"]["products"]["page_info"]["total_pages"]
+        if graphql_variables["currentPage"] >= total_pages:
+            break
+
+        graphql_variables["currentPage"] += 1
+
+    # Fetch and download app covers
+    new_apps = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for app_id in app_ids:
+            try:
+                post_data = {
+                    "app_ids": [app_id],
+                    "show_coming_soon": True,
+                    "content_genus": "all",
+                    "subscription_only": 1,
+                    "include_unpublished": True
+                }
+                response = session.post("https://www.viveport.com/api/cms/v4/mobiles/a", json=post_data)
+                response_data = response.json()
+
+                app_data = response_data["contents"][0]["apps"][0]
+                package_name = app_data["package_name"]
+                app_name = app_data["title"]
+                thumbnails = app_data["thumbnails"]
+
+                executor.submit(download_image, thumbnails["small"]["url"], os.path.join(small_folder, f"{package_name}.jpg"))
+                executor.submit(download_image, thumbnails["medium"]["url"], os.path.join(medium_folder, f"{package_name}.jpg"))
+                executor.submit(download_image, thumbnails["large"]["url"], os.path.join(large_folder, f"{package_name}.jpg"))
+                executor.submit(download_image, thumbnails["square"]["url"], os.path.join(square_folder, f"{package_name}.jpg"))
+
+                logging.info(f"Downloaded images for {package_name}")
+
+                new_apps.append({
+                    "appName": app_name,
+                    "id": app_id,
+                    "packageName": package_name,
+                    "id": app_id
+                })
+            except Exception as error:
+                logging.error(f"Error: {error}")
+
+    merged_apps = merge_apps(existing_apps, new_apps)
+
+    with open("viveport_apps.json", "w") as f:
+        json.dump(merged_apps, f)
+
+    logging.info("Done fetching Viveport app covers.")
+
+
 if __name__ == "__main__":
     try:
         with open("pico_apps.json") as f:
@@ -249,3 +395,11 @@ if __name__ == "__main__":
         existing_oculus_apps = []
 
     fetch_oculus_apps_with_covers(existing_oculus_apps)
+
+    try:
+        with open("viveport_apps.json") as f:
+            existing_viveport_apps = json.load(f)
+    except FileNotFoundError:
+        existing_viveport_apps = []
+
+    fetch_viveport_covers(existing_viveport_apps)
