@@ -5,6 +5,9 @@ import os
 
 import requests
 
+from PIL import Image
+import io
+
 
 logging.basicConfig(level=logging.INFO)
 session = requests.Session()
@@ -235,6 +238,12 @@ def fetch_pico_covers(app_data):
 
     logging.info("All Pico app covers downloaded.")
 
+def download_image_webp(url, filename):
+    with requests.get(url, stream=True) as response:
+        response.raise_for_status()
+        image = Image.open(io.BytesIO(response.content))
+        # Convert and save the image in webp format
+        image.save(filename, 'WEBP')
 
 def fetch_viveport_covers(existing_apps):
     logging.info("Fetching Viveport app covers...")
@@ -331,10 +340,10 @@ def fetch_viveport_covers(existing_apps):
                 app_name = app_data["title"]
                 thumbnails = app_data["thumbnails"]
 
-                executor.submit(download_image, thumbnails["small"]["url"], os.path.join(small_folder, f"{package_name}.jpg"))
-                executor.submit(download_image, thumbnails["medium"]["url"], os.path.join(medium_folder, f"{package_name}.jpg"))
-                executor.submit(download_image, thumbnails["large"]["url"], os.path.join(large_folder, f"{package_name}.jpg"))
-                executor.submit(download_image, thumbnails["square"]["url"], os.path.join(square_folder, f"{package_name}.jpg"))
+                executor.submit(download_image_webp, thumbnails["small"]["url"], os.path.join(small_folder, f"{package_name}.webp"))
+                executor.submit(download_image_webp, thumbnails["medium"]["url"], os.path.join(medium_folder, f"{package_name}.webp"))
+                executor.submit(download_image_webp, thumbnails["large"]["url"], os.path.join(large_folder, f"{package_name}.webp"))
+                executor.submit(download_image_webp, thumbnails["square"]["url"], os.path.join(square_folder, f"{package_name}.webp"))
 
                 logging.info(f"Downloaded images for {package_name}")
 
@@ -353,6 +362,104 @@ def fetch_viveport_covers(existing_apps):
         json.dump(merged_apps, f)
 
     logging.info("Done fetching Viveport app covers.")
+
+
+def fetch_vive_business_covers(existing_apps):
+    logging.info("Fetching Vive Business app covers...")
+
+    # Folders for different thumbnail sizes
+    small_folder = "vive_business_small"
+    medium_folder = "vive_business_medium"
+    large_folder = "vive_business_large"
+    square_folder = "vive_business_square"
+
+    os.makedirs(small_folder, exist_ok=True)
+    os.makedirs(medium_folder, exist_ok=True)
+    os.makedirs(large_folder, exist_ok=True)
+    os.makedirs(square_folder, exist_ok=True)
+
+    # GraphQL query and variables
+    graphql_query = '''
+    query getProductAll($pageSize: Int, $currentPage: Int) {
+      products(filter: {}, pageSize: $pageSize, currentPage: $currentPage) {
+        total_count
+        page_info {
+          total_pages
+        }
+        items {
+          sku
+          deviceType
+        }
+        __typename
+      }
+    }
+    '''
+
+    graphql_variables = {
+        "pageSize": 9999,
+        "currentPage": 1
+    }
+
+    graphql_url = "https://business.vive.com/graphql"
+    headers = {"Content-Type": "application/json"}
+
+    # Fetch app IDs
+    app_ids = []
+    while True:
+        response = requests.post(graphql_url, json={"query": graphql_query, "variables": graphql_variables}, headers=headers)
+        response_data = response.json()
+
+        app_ids += [item["sku"] for item in response_data["data"]["products"]["items"] if item['deviceType'] == '1_']
+
+        logging.info(f"Fetched app IDs from page {graphql_variables['currentPage']} of {response_data['data']['products']['page_info']['total_pages']}")
+
+        total_pages = response_data["data"]["products"]["page_info"]["total_pages"]
+        if graphql_variables["currentPage"] >= total_pages:
+            break
+
+        graphql_variables["currentPage"] += 1
+
+    # Fetch and download app covers
+    new_apps = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for app_id in app_ids:
+            try:
+                post_data = {
+                    "app_ids": [app_id],
+                    "product_type": 5,
+                    "cnty": "US"
+                }
+
+                response = requests.post("https://business.vive.com/api/cms/v4/mobiles/a", json=post_data)
+                response_data = response.json()
+
+                app_data = response_data["contents"][0]["apps"][0]
+                package_name = app_data["package_name"]
+                app_name = app_data["title"]
+                thumbnails = app_data["thumbnails"]
+
+                executor.submit(download_image_webp, thumbnails["small"]["url"], os.path.join(small_folder, f"{package_name}.webp"))
+                executor.submit(download_image_webp, thumbnails["medium"]["url"], os.path.join(medium_folder, f"{package_name}.webp"))
+                executor.submit(download_image_webp, thumbnails["large"]["url"], os.path.join(large_folder, f"{package_name}.webp"))
+                executor.submit(download_image_webp, thumbnails["square"]["url"], os.path.join(square_folder, f"{package_name}.webp"))
+
+                logging.info(f"Downloaded images for {package_name}")
+
+                new_apps.append({
+                    "appName": app_name,
+                    "id": app_id,
+                    "packageName": package_name,
+                    "id": app_id
+                })
+            except Exception as error:
+                logging.error(f"Error: {error}")
+
+    merged_apps = merge_apps(existing_apps, new_apps)
+
+    with open("vive_business_apps.json", "w") as f:
+        json.dump(merged_apps, f)
+
+    logging.info("Done fetching Vive Business app covers.")
 
 
 if __name__ == "__main__":
@@ -380,3 +487,11 @@ if __name__ == "__main__":
         existing_viveport_apps = []
 
     fetch_viveport_covers(existing_viveport_apps)
+
+    try:
+        with open("vive_business_apps.json") as f:
+            existing_vive_business_apps = json.load(f)
+    except FileNotFoundError:
+        existing_vive_business_apps = []
+
+    fetch_vive_business_covers(existing_vive_business_apps)
