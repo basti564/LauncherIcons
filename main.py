@@ -253,39 +253,29 @@ def fetch_viveport_covers(existing_apps):
     # GraphQL query and variables
     graphql_query = '''
     query getProduct(
-        $category_id: String
-        $app_type: [String]
-        $sortCondition: ProductAttributeSortInput
-        $keyword: String
-        $media_type: [String]
-        $isSubscription: [String]
-        $prod_type: [String]
-        $clientType: String
-        $pageSize: Int
-        $currentPage: Int
+    $category_id: String
+    $app_type: [String]
+    $prod_type: [String]
+    $pageSize: Int
+    $currentPage: Int
     ) {
-        products(
-            filter: {
-                category_id: { eq: $category_id }
-                app_type: { in: $app_type }
-                media_type: { in: $media_type }
-                is_subscription: { in: $isSubscription }
-                prod_type: { in: $prod_type }
-            }
-            sort: $sortCondition
-            search: $keyword
-            client_type: $clientType
-            pageSize: $pageSize
-            currentPage: $currentPage
-        ) {
-            total_count
-            page_info {
-                total_pages
-            }
-            items {
-                sku
-            }
+    products(
+        filter: {
+        category_id: { eq: $category_id }
+        app_type: { in: $app_type }
+        prod_type: { in: $prod_type }
         }
+        pageSize: $pageSize
+        currentPage: $currentPage
+    ) {
+        total_count
+        page_info {
+        total_pages
+        }
+        items {
+        sku
+        }
+    }
     }
     '''
 
@@ -294,24 +284,11 @@ def fetch_viveport_covers(existing_apps):
         "app_type": [
             "5"
         ],
-        "sortCondition": {
-            "position": "DESC"
-        },
-        "keyword": "",
-        "media_type": [
-            "330",
-            "331"
-        ],
-        "isSubscription": [
-            "0",
-            "1"
-        ],
         "prod_type": [
             "375",
             "377"
         ],
-        "clientType": "desktopbrowser",
-        "pageSize": 24,
+        "pageSize": 9999,
         "currentPage": 1
     }
 
