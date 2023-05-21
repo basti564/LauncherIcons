@@ -32,6 +32,11 @@ def merge_apps(existing_apps, new_apps):
     return merged_data
 
 
+pico_headers = {
+    "User-Agent": "AssistantPhone 1.1.7 rv:1.1.7.03 (iPad; iPadOS 16.5; en_DE) Cronet"
+    }
+
+
 def fetch_pico_apps(existing_apps):
     logging.info("Fetching Pico apps...")
 
@@ -54,7 +59,7 @@ def fetch_pico_apps(existing_apps):
 
         logging.info(f"Fetching Pico apps from page {page}")
 
-        response = session.request(**pico_options)
+        response = session.request(**pico_options, headers=pico_headers)
         response_data = response.json()
 
         new_apps = [
@@ -213,7 +218,7 @@ def fetch_pico_covers(app_data):
         landscape_filenames = []
         futures = []
         for url in urls:
-            futures.append(executor.submit(session.post, url))
+            futures.append(executor.submit(session.post, url, headers=pico_headers))
 
         for future, app in zip(futures, app_data):
             try:
@@ -228,7 +233,7 @@ def fetch_pico_covers(app_data):
                 landscape_filenames.append(landscape_filename)
                 executor.submit(download_image, square_url, square_filename)
                 executor.submit(download_image, landscape_url, landscape_filename)
-                logging.info(f"Downloaded Covers for {app['packageName']}")
+                logging.info(f"Downloading Covers for {app['packageName']}")
             except Exception as e:
                 error_msg = f"Error: {str(e)}\n"
                 with open("pico_cover_errors.log", "a") as f:
