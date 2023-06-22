@@ -33,7 +33,7 @@ def merge_apps(existing_apps, new_apps):
 
 
 pico_headers = {
-    "User-Agent": "AssistantPhone 1.1.7 rv:1.1.7.03 (iPad; iPadOS 16.5; en_DE) Cronet"
+    "User-Agent": "AssistantPhone 1.2.2 rv:1.2.2.02 (iPad; iPadOS 17.0; en_DE) Cronet"
     }
 
 
