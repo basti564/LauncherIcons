@@ -62,23 +62,27 @@ def fetch_pico_apps(existing_apps):
         response = session.request(**pico_options, headers=pico_headers)
         response_data = response.json()
 
-        new_apps = [
-            dict(
-                app,
-                appName=app.get("name", ""),
-                packageName=app.get("package_name", ""),
-                id=app.get("item_id", ""),
-            )
-            for app in response_data["data"]["items"]
-            if app.get("package_name")
-        ]
+        if "data" in response_data and response_data["data"]:
+            new_apps = [
+                dict(
+                    app,
+                    appName=app.get("name", ""),
+                    packageName=app.get("package_name", ""),
+                    id=app.get("item_id", ""),
+                )
+                for app in response_data["data"]["items"]
+                if app.get("package_name")
+            ]
 
-        app_data.extend(new_apps)
-        has_more = response_data["data"]["has_more"]
+            app_data.extend(new_apps)
+            has_more = response_data["data"].get("has_more", False)
 
-        if has_more:
-            page += 1
-            fetch_apps()
+            if has_more:
+                page += 1
+                fetch_apps()
+        else:
+            logging.error("No data found in the response.")
+            has_more = False
 
     page = 1
     has_more = True
