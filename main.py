@@ -62,7 +62,7 @@ def fetch_pico_apps(existing_apps):
         response = session.request(**pico_options, headers=pico_headers)
         response_data = response.json()
 
-        if "data" in response_data and response_data["data"]:
+        if "data" in response_data and response_data["data"] and "items" in response_data["data"]:
             new_apps = [
                 dict(
                     app,
