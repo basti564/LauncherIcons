@@ -27268,3 +27268,5 @@ Error: 403 Client Error: Forbidden for url: https://appstore-us.picovr.com/api/a
 
 Error: 403 Client Error: Forbidden for url: https://appstore-us.picovr.com/api/app/v1/item/info?app_language=en&device_name=A8110&item_id=7265981042744459320&manifest_version_code=300800000
 
+Error: 500 Server Error: Internal Server Error for url: https://appstore-us.picovr.com/api/app/v1/item/info?app_language=en&device_name=A8110&item_id=2384&manifest_version_code=300800000
+
