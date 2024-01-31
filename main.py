@@ -2,15 +2,17 @@ import concurrent.futures
 import json
 import logging
 import os
-
 import requests
-
 from PIL import Image
 import io
 
-
 logging.basicConfig(level=logging.INFO)
+
 session = requests.Session()
+
+PICO_HEADERS = {
+    "User-Agent": "AssistantPhone 1.2.2 rv:1.2.2.02 (iPad; iPadOS 17.0; en_DE) Cronet"
+}
 
 
 def merge_apps(existing_apps, new_apps):
@@ -28,11 +30,6 @@ def merge_apps(existing_apps, new_apps):
         }
         merged_data.append(app_data)
     return merged_data
-
-
-pico_headers = {
-    "User-Agent": "AssistantPhone 1.2.2 rv:1.2.2.02 (iPad; iPadOS 17.0; en_DE) Cronet"
-    }
 
 
 def fetch_pico_apps(existing_apps):
@@ -59,7 +56,7 @@ def fetch_pico_apps(existing_apps):
         pico_options["params"]["page"] = str(page)
         logging.info(f"Fetching Pico apps from page {page}")
 
-        response = session.request(**pico_options, headers=pico_headers)
+        response = session.request(**pico_options, headers=PICO_HEADERS)
         response_data = response.json()
 
         if "data" in response_data and response_data["data"] and "items" in response_data["data"]:
@@ -80,7 +77,7 @@ def fetch_pico_apps(existing_apps):
             if has_more:
                 page += 1
         else:
-            logging.warn("No data found on page.")
+            logging.warning("No data found on page.")
             has_more = False
 
     merged_data = merge_apps(existing_apps, app_data)
@@ -215,7 +212,7 @@ def fetch_pico_covers(app_data):
         landscape_filenames = []
         futures = []
         for url in urls:
-            futures.append(executor.submit(session.post, url, headers=pico_headers))
+            futures.append(executor.submit(session.post, url, headers=PICO_HEADERS))
 
         for future, app in zip(futures, app_data):
             try:
