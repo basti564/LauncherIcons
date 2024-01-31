@@ -242,12 +242,14 @@ def fetch_pico_covers(app_data):
 
     logging.info("All Pico app covers downloaded.")
 
+
 def download_image_webp(url, filename):
     with requests.get(url, stream=True) as response:
         response.raise_for_status()
         image = Image.open(io.BytesIO(response.content))
         # Convert and save the image in webp format
         image.save(filename, 'WEBP')
+
 
 def fetch_viveport_covers(existing_apps):
     logging.info("Fetching Viveport app covers...")
