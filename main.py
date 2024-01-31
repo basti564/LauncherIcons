@@ -358,7 +358,6 @@ def fetch_viveport_covers(existing_apps):
 
                 new_apps.append({
                     "appName": app_name,
-                    "id": app_id,
                     "packageName": package_name,
                     "id": app_id
                 })
@@ -456,7 +455,6 @@ def fetch_vive_business_covers(existing_apps):
 
                 new_apps.append({
                     "appName": app_name,
-                    "id": app_id,
                     "packageName": package_name,
                     "id": app_id
                 })
