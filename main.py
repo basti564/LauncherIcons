@@ -19,16 +19,14 @@ def merge_apps(existing_apps, new_apps):
     merged_data = []
     for new_app in new_apps:
         package_name = new_app["packageName"]
-        if package_name in existing_packages:
-            app_data = {
-                "appName": new_app.get("appName", ""),
-                "packageName": package_name,
-                "id": new_app.get("id", "")
-            }
-            merged_data.append(app_data)
-        else:
-            logging.info(f"MISSING:\n{{appName: {new_app.get('appName', '')}, packageName: {package_name}, id: {new_app.get('id', '')}}}")
-            merged_data.append(new_app)
+        if package_name not in existing_packages:
+            logging.info(f"MISSING: {new_app}")
+        app_data = {
+            "appName": new_app.get("appName", ""),
+            "packageName": package_name,
+            "id": new_app.get("id", "")
+        }
+        merged_data.append(app_data)
     return merged_data
 
 
