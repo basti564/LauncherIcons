@@ -53,10 +53,12 @@ def fetch_pico_apps(existing_apps):
         },
     }
 
-    def fetch_apps():
-        nonlocal page, has_more, app_data
-        pico_options["params"]["page"] = str(page)
+    page = 1
+    has_more = True
+    app_data = []
 
+    while has_more:
+        pico_options["params"]["page"] = str(page)
         logging.info(f"Fetching Pico apps from page {page}")
 
         response = session.request(**pico_options, headers=pico_headers)
@@ -79,16 +81,9 @@ def fetch_pico_apps(existing_apps):
 
             if has_more:
                 page += 1
-                fetch_apps()
         else:
-            logging.error("No data found in the response.")
+            logging.warn("No data found on page.")
             has_more = False
-
-    page = 1
-    has_more = True
-    app_data = []
-
-    fetch_apps()
 
     merged_data = merge_apps(existing_apps, app_data)
 
