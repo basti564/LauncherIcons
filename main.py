@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 session = requests.Session()
 
 PICO_HEADERS = {
-    "User-Agent": "AssistantPhone 1.2.2 rv:1.2.2.02 (iPad; iPadOS 17.0; en_DE) Cronet"
+    "User-Agent": "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 AppName/picovr_assistant_overseas AppVersion/10.3.0 AppVersionCode/100300 Package/com.picovr.global.AssistantPhone SystemType/iPad OSVersion/17.0"
 }
 
 
