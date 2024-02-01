@@ -662,15 +662,14 @@ def fetch_sidequest_apps(existing_sidequest_apps: AppList, existing_oculus_apps:
         page += 1
 
     merged_sidequest_apps = merge_apps(existing_sidequest_apps, new_apps)
-    dump_to_file("oculus_apps.json", merged_sidequest_apps)
+    dump_to_file("sidequest_apps.json", merged_sidequest_apps)
 
     merged_oculus_apps = merge_apps(existing_oculus_apps, new_apps)
-    dump_to_file("sidequest_apps.json", merged_oculus_apps)
+    dump_to_file("oculus_apps.json", merged_oculus_apps)
 
     logging.info("Sidequest apps fetched successfully.")
 
     return merged_sidequest_apps
-
 
 if __name__ == "__main__":
     # existing_pico_apps = load_from_file("pico_apps.json")
