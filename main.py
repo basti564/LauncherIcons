@@ -615,7 +615,7 @@ def fetch_sidequest_apps(existing_sidequest_apps: AppList, existing_oculus_apps:
     }
 
     while has_more:
-        logging.info(f"Fetching Pico apps from page {page}")
+        logging.info(f"Fetching Sidequest apps from page {page}")
         params = {
             "search": "",
             "page": page,
