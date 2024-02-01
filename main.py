@@ -144,142 +144,48 @@ def fetch_oculus_apps(existing_apps: AppList) -> None:
 '''
 
 
+def fetch_oculus_section_items(section_id: str) -> list:
+    items_payload = {
+        "forced_locale": "en_US",
+        "doc_id": "4743589559102018",
+        "access_token": "OC|1076686279105243|",
+        "variables": json.dumps({
+            "sectionId": section_id,
+            "sortOrder": None,
+            "sectionItemCount": 1000
+        })
+    }
+
+    response = session.post("https://graph.oculus.com/graphql", data=items_payload)
+    response_data = response.json()
+
+    apps = response_data["data"]["node"]["all_items"]["edges"]
+    app_ids = [{"id": app["node"]["id"]} for app in apps]
+
+    return app_ids
+
+
 def fetch_oculus_apps_with_covers(existing_apps: AppList) -> None:
     logging.info("Fetching Oculus apps...")
 
     section_ids = ["1888816384764129", "174868819587665"]
-
-    landscape_folder = "oculus_landscape"
-    portrait_folder = "oculus_portrait"
-    square_folder = "oculus_square"
-
-    os.makedirs(landscape_folder, exist_ok=True)
-    os.makedirs(portrait_folder, exist_ok=True)
-    os.makedirs(square_folder, exist_ok=True)
-
     new_apps = []
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        for section_id in section_ids:
-            items_payload = {
-                "forced_locale": "en_US",
-                "doc_id": "4743589559102018",
-                "access_token": "OC|1076686279105243|",
-                "variables": json.dumps({
-                    "sectionId": section_id,
-                    "sortOrder": None,
-                    "sectionItemCount": 1000
-                })
-            }
+        future_to_app_id = {
+            executor.submit(fetch_oculus_app_details_and_download_covers, node['id']): node['id']
+            for section_id in section_ids
+            for node in fetch_oculus_section_items(section_id)
+        }
 
-            response = session.post("https://graph.oculus.com/graphql", data=items_payload)
-            response_data = response.json()
-
-            edges = response_data["data"]["node"]["all_items"]["edges"]
-
-            for edge in edges:
-                node = edge["node"]
-
-                try:
-                    app_details_payload = {
-                        "access_token": "OC|1076686279105243|",
-                        "doc_id": "3828663700542720",
-                        "variables": json.dumps({"applicationID": node['id']})
-                    }
-
-                    app_details_response = session.post("https://graph.oculus.com/graphql", data=app_details_payload)
-                    app_details_data = app_details_response.json()
-                    latest_supported_binary = app_details_data["data"]["node"][
-                        "release_channels"
-                    ]["nodes"][0]["latest_supported_binary"]
-
-                    if latest_supported_binary is not None:
-                        app_binary_info_variables = {
-                            "params": {
-                                "app_params": [{
-                                    "app_id": node['id'],
-                                    "version_code": latest_supported_binary['version_code']
-                                }]
-                            }
-                        }
-
-                        app_binary_info_payload = {
-                            "doc": """
-                                query ($params: AppBinaryInfoArgs!) {
-                                    app_binary_info(args: $params) {
-                                        info {
-                                            binary {
-                                                ... on AndroidBinary {
-                                                    id
-                                                    package_name
-                                                    version_code
-                                                    asset_files {
-                                                        edges {
-                                                            node {
-                                                                ... on AssetFile {
-                                                                    file_name
-                                                                    uri
-                                                                    size
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            """,
-                            "variables": json.dumps(app_binary_info_variables),
-                            "access_token": "OC|1317831034909742|"
-                        }
-
-                        app_binary_info_response = session.post("https://graph.oculus.com/graphql",
-                                                                json=app_binary_info_payload)
-                        app_binary_info_data = app_binary_info_response.json()
-                        package_name = app_binary_info_data["data"]["app_binary_info"][
-                            "info"
-                        ][0]["binary"]["package_name"]
-                        display_name = node["display_name"]
-
-                        landscape_url = node["cover_landscape_image"]["uri"]
-                        portrait_url = node["cover_portrait_image"]["uri"]
-                        square_url = node["cover_square_image"]["uri"]
-
-                        executor.submit(
-                            download_image,
-                            landscape_url,
-                            os.path.join(landscape_folder, f"{package_name}.jpg"),
-                            3,
-                            5
-                        )
-                        executor.submit(
-                            download_image,
-                            portrait_url,
-                            os.path.join(portrait_folder, f"{package_name}.jpg"),
-                            3,
-                            5
-                        )
-                        executor.submit(
-                            download_image,
-                            square_url,
-                            os.path.join(square_folder, f"{package_name}.jpg"),
-                            3,
-                            5
-                        )
-
-                        logging.info(f"Downloaded images for {package_name}")
-
-                        new_apps.append(
-                            App(
-                                appName=display_name,
-                                packageName=package_name,
-                                id=node["id"],
-                            )
-                        )
-
-                except Exception as error:
-                    logging.error(f"Error: {error}")
+        for future in concurrent.futures.as_completed(future_to_app_id):
+            app_id = future_to_app_id[future]
+            try:
+                app = future.result()
+                new_apps.append(app)
+                logging.info(f"Processed {app.packageName}")
+            except Exception as exc:
+                logging.error(f"{app_id} generated an exception: {exc}")
 
     dump_to_file("oculus_apps.json", merge_apps(existing_apps, new_apps))
 
@@ -583,7 +489,7 @@ def fetch_vive_business_covers(existing_apps: AppList) -> None:
     logging.info("Done fetching Vive Business app covers.")
 
 
-def fetch_oculus_app_details_and_download_covers(oculus_app_id: str) -> App:
+def fetch_oculus_app_details_and_download_covers(oculus_app_id: str) -> App | None:
     landscape_folder = "oculus_landscape"
     portrait_folder = "oculus_portrait"
     square_folder = "oculus_square"
@@ -594,16 +500,13 @@ def fetch_oculus_app_details_and_download_covers(oculus_app_id: str) -> App:
     os.makedirs(square_folder, exist_ok=True)
     os.makedirs(icon_folder, exist_ok=True)
 
-    store_stuff_variables = {
-        "applicationID": oculus_app_id
-    }
+    store_stuff_variables = {"applicationID": oculus_app_id}
     store_stuff_payload = {
         "doc_id": "8571881679548867",
         "access_token": "OC|1076686279105243|",
         "variables": json.dumps(store_stuff_variables)
     }
-    store_stuff_response = session.post("https://graph.oculus.com/graphql",
-                                        data=store_stuff_payload)
+    store_stuff_response = session.post("https://graph.oculus.com/graphql", data=store_stuff_payload)
     store_stuff_data = store_stuff_response.json()
 
     app_name = store_stuff_data["data"]["node"]["display_name"]
@@ -671,7 +574,8 @@ def fetch_oculus_app_details_and_download_covers(oculus_app_id: str) -> App:
         app_binary_info_data = app_binary_info_response.json()
         package_name = app_binary_info_data["data"]["app_binary_info"]["info"][0]["binary"][
             "package_name"]
-
+    else:
+        return  # TODO look into getting the package_name without having a valid binary if that even makes sense
     translations = \
         store_stuff_data["data"]["node"]["lastRevision"]["nodes"][0]["pdp_metadata"]["translations"]["nodes"]
     for translation in translations:
