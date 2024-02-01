@@ -1,11 +1,11 @@
-import concurrent.futures
+from typing import NamedTuple, List, Dict, TypedDict, Optional
 import json
 import logging
 import os
 import requests
 from PIL import Image
 import io
-from typing import List, Dict, Any
+import concurrent.futures
 
 logging.basicConfig(level=logging.INFO)
 
@@ -16,33 +16,53 @@ PICO_HEADERS: Dict[str, str] = {
 }
 
 
-def merge_apps(existing_apps: List[Dict[str, str]], new_apps: List[Dict[str, Any]]) -> List[Dict[str, str]]:
-    logging.info("Merging existing and new apps...")
-    existing_packages = {app["packageName"] for app in existing_apps}
-    merged_data = []
+class App(NamedTuple):
+    appName: str
+    packageName: str
+    id: str
+
+
+class AppDetails(TypedDict, total=False):
+    appName: str
+    packageName: str
+    id: str
+
+
+AppList = List[App]
+AppDetailsList = List[AppDetails]
+
+
+def merge_apps(existing_apps: AppList, new_apps: AppList) -> AppList:
+    existing_packages = {app.packageName for app in existing_apps}
+    merged_data = existing_apps[:]
     for new_app in new_apps:
-        package_name = new_app["packageName"]
+        package_name = new_app.packageName
         if package_name not in existing_packages:
             logging.info(f"MISSING: {new_app}")
-        app_data = {
-            "appName": new_app.get("appName", ""),
-            "packageName": package_name,
-            "id": new_app.get("id", ""),
-        }
-        merged_data.append(app_data)
+            merged_data.append(new_app)
     return merged_data
 
 
-def dump_to_file(filename: str, data: Any) -> None:
+def dump_to_file(filename: str, data: AppList) -> None:
     try:
+        dict_data = [app._asdict() for app in data]
         with open(filename, "w") as file:
-            json.dump(data, file)
+            json.dump(dict_data, file)
         logging.info(f"Data saved to {filename}")
     except IOError as e:
         logging.error(f"Failed to save data to {filename}: {e}")
 
 
-def fetch_pico_apps(existing_apps: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def load_from_file(filename: str) -> AppList:
+    try:
+        with open(filename) as file:
+            dict_data = json.load(file)
+            return [App(**app_dict) for app_dict in dict_data]
+    except FileNotFoundError:
+        return []
+
+
+def fetch_pico_apps(existing_apps: AppList) -> AppList:
     logging.info("Fetching Pico apps...")
 
     pico_options = {
@@ -75,11 +95,10 @@ def fetch_pico_apps(existing_apps: List[Dict[str, Any]]) -> List[Dict[str, Any]]
                 and "items" in response_data["data"]
         ):
             new_apps = [
-                dict(
-                    app,
+                App(
                     appName=app.get("name", ""),
                     packageName=app.get("package_name", ""),
-                    id=app.get("item_id", ""),
+                    id=app.get("safe_item_id", "")
                 )
                 for app in response_data["data"]["items"]
                 if app.get("package_name")
@@ -102,8 +121,7 @@ def fetch_pico_apps(existing_apps: List[Dict[str, Any]]) -> List[Dict[str, Any]]
     return merged_data
 
 
-'''
-def fetch_oculus_apps(existing_apps: List[Dict[str, Any]]) -> None:
+def fetch_oculus_apps(existing_apps: AppList) -> None:
     logging.info("Fetching Oculus apps...")
     oculus_options = {
         "url": "https://oculusdb.rui2015.me/api/v1/allapps",
@@ -127,10 +145,9 @@ def fetch_oculus_apps(existing_apps: List[Dict[str, Any]]) -> None:
     dump_to_file("oculus_apps.json", merge_apps(existing_apps, new_apps))
 
     logging.info("Oculus apps fetched successfully.")
-'''
 
 
-def fetch_oculus_apps_with_covers(existing_apps: List[Dict[str, Any]]) -> None:
+def fetch_oculus_apps_with_covers(existing_apps: AppList) -> None:
     logging.info("Fetching Oculus apps...")
 
     section_ids = ["1888816384764129", "174868819587665"]
@@ -221,7 +238,7 @@ def download_image(url: str, filename: str) -> None:
                 f.write(chunk)
 
 
-def fetch_pico_covers(app_data: List[Dict[str, Any]]) -> None:
+def fetch_pico_covers(app_data: AppList) -> None:
     logging.info("Fetching Pico app covers...")
     if not os.path.exists("pico_square"):
         os.makedirs("pico_square")
@@ -229,7 +246,7 @@ def fetch_pico_covers(app_data: List[Dict[str, Any]]) -> None:
         os.makedirs("pico_landscape")
 
     urls = [
-        f"https://appstore-us.picovr.com/api/app/v1/item/info?app_language=en&device_name=A8110&item_id={app['id']}&manifest_version_code=300800000"
+        f"https://appstore-us.picovr.com/api/app/v1/item/info?app_language=en&device_name=A8110&item_id={app.id}&manifest_version_code=300800000"
         for app in app_data
     ]
 
@@ -247,13 +264,13 @@ def fetch_pico_covers(app_data: List[Dict[str, Any]]) -> None:
                 data = response.json()
                 square_url = data["data"]["cover"]["square"]
                 landscape_url = data["data"]["cover"]["landscape"]
-                square_filename = f"pico_square/{app['packageName']}.png"
-                landscape_filename = f"pico_landscape/{app['packageName']}.png"
+                square_filename = f"pico_square/{app.packageName}.png"
+                landscape_filename = f"pico_landscape/{app.packageName}.png"
                 square_filenames.append(square_filename)
                 landscape_filenames.append(landscape_filename)
                 executor.submit(download_image, square_url, square_filename)
                 executor.submit(download_image, landscape_url, landscape_filename)
-                logging.info(f"Downloading Covers for {app['packageName']}")
+                logging.info(f"Downloading Covers for {app.packageName}")
             except Exception as e:
                 error_msg = f"Error: {str(e)}\n"
                 with open("pico_cover_errors.log", "a") as f:
@@ -303,7 +320,7 @@ def download_vive_images(app_data, small_folder, medium_folder, large_folder, sq
     return {"appName": app_name, "packageName": package_name, "id": app_data.get("id", "")}
 
 
-def fetch_viveport_covers(existing_apps: List[Dict[str, Any]]) -> None:
+def fetch_viveport_covers(existing_apps: AppList) -> None:
     logging.info("Fetching Viveport app covers...")
 
     small_folder = "viveport_small"
@@ -404,7 +421,7 @@ def fetch_viveport_covers(existing_apps: List[Dict[str, Any]]) -> None:
     logging.info("Done fetching Viveport app covers.")
 
 
-def fetch_vive_business_covers(existing_apps: List[Dict[str, Any]]) -> None:
+def fetch_vive_business_covers(existing_apps: AppList) -> None:
     logging.info("Fetching Vive Business app covers...")
 
     small_folder = "vive_business_small"
@@ -487,35 +504,15 @@ def fetch_vive_business_covers(existing_apps: List[Dict[str, Any]]) -> None:
 
 
 if __name__ == "__main__":
-    try:
-        with open("pico_apps.json") as f:
-            existing_pico_apps = json.load(f)
-    except FileNotFoundError:
-        existing_pico_apps = []
-
+    existing_pico_apps = load_from_file("pico_apps.json")
     app_data = fetch_pico_apps(existing_pico_apps)
     fetch_pico_covers(app_data)
 
-    try:
-        with open("oculus_apps.json") as f:
-            existing_oculus_apps = json.load(f)
-    except FileNotFoundError:
-        existing_oculus_apps = []
-
+    existing_oculus_apps = load_from_file("oculus_apps.json")
     fetch_oculus_apps_with_covers(existing_oculus_apps)
 
-    try:
-        with open("viveport_apps.json") as f:
-            existing_viveport_apps = json.load(f)
-    except FileNotFoundError:
-        existing_viveport_apps = []
-
+    existing_viveport_apps = load_from_file("viveport_apps.json")
     fetch_viveport_covers(existing_viveport_apps)
 
-    try:
-        with open("vive_business_apps.json") as f:
-            existing_vive_business_apps = json.load(f)
-    except FileNotFoundError:
-        existing_vive_business_apps = []
-
+    existing_vive_business_apps = load_from_file("vive_business_apps.json")
     fetch_vive_business_covers(existing_vive_business_apps)
