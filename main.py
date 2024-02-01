@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from typing import NamedTuple, List, Dict, TypedDict, Optional
 import json
 import logging
@@ -22,14 +23,7 @@ class App(NamedTuple):
     id: str
 
 
-class AppDetails(TypedDict, total=False):
-    appName: str
-    packageName: str
-    id: str
-
-
 AppList = List[App]
-AppDetailsList = List[AppDetails]
 
 
 def merge_apps(existing_apps: AppList, new_apps: AppList) -> AppList:
@@ -121,6 +115,7 @@ def fetch_pico_apps(existing_apps: AppList) -> AppList:
     return merged_data
 
 
+'''
 def fetch_oculus_apps(existing_apps: AppList) -> None:
     logging.info("Fetching Oculus apps...")
     oculus_options = {
@@ -132,8 +127,7 @@ def fetch_oculus_apps(existing_apps: AppList) -> None:
     data = response.json()
 
     new_apps = [
-        dict(
-            app,
+        App(
             appName=app.get("appName", ""),
             packageName=app.get("packageName", ""),
             id=app.get("id", ""),
@@ -145,6 +139,7 @@ def fetch_oculus_apps(existing_apps: AppList) -> None:
     dump_to_file("oculus_apps.json", merge_apps(existing_apps, new_apps))
 
     logging.info("Oculus apps fetched successfully.")
+'''
 
 
 def fetch_oculus_apps_with_covers(existing_apps: AppList) -> None:
@@ -215,11 +210,11 @@ def fetch_oculus_apps_with_covers(existing_apps: AppList) -> None:
                         logging.info(f"Downloaded images for {package_name}")
 
                         new_apps.append(
-                            {
-                                "appName": display_name,
-                                "packageName": package_name,
-                                "id": node["id"],
-                            }
+                            App(
+                                appName=display_name,
+                                packageName=package_name,
+                                id=node["id"],
+                            )
                         )
 
                 except Exception as error:
@@ -288,7 +283,12 @@ def download_image_webp(url: str, filename: str) -> None:
         image.save(filename, "WEBP")
 
 
-def download_vive_images(app_data, small_folder, medium_folder, large_folder, square_folder, executor):
+def download_vive_images(app_data: Dict[str, any],
+                         small_folder: str,
+                         medium_folder: str,
+                         large_folder: str,
+                         square_folder: str,
+                         executor: ThreadPoolExecutor) -> App:
     package_name = app_data["package_name"]
     app_name = app_data["title"]
     thumbnails = app_data["thumbnails"]
@@ -317,7 +317,11 @@ def download_vive_images(app_data, small_folder, medium_folder, large_folder, sq
 
     logging.info(f"Downloaded images for {package_name}")
 
-    return {"appName": app_name, "packageName": package_name, "id": app_data.get("id", "")}
+    return App(
+        appName=app_name,
+        packageName=package_name,
+        id=app_data.get("id", "")
+    )
 
 
 def fetch_viveport_covers(existing_apps: AppList) -> None:
