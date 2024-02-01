@@ -647,6 +647,7 @@ def fetch_sidequest_apps(existing_sidequest_apps: AppList, existing_oculus_apps:
                             if folder:
                                 image_path = os.path.join(folder, f"{package_name}.jpg")
                                 download_image(image["uri"], image_path)
+                                logging.info(f"Downloaded image for {app_name}")
                 new_oculus_app = App(appName=app_name, packageName=package_name, id=app_id)
                 new_oculus_apps.append(new_oculus_app)
 
@@ -661,7 +662,7 @@ def fetch_sidequest_apps(existing_sidequest_apps: AppList, existing_oculus_apps:
         page += 1
 
     merged_sidequest_apps = merge_apps(existing_sidequest_apps, new_apps)
-    dump_to_file("sidequest_apps.json", merged_sidequest_apps)
+    dump_to_file("oculus_apps.json", merged_sidequest_apps)
 
     merged_oculus_apps = merge_apps(existing_oculus_apps, new_apps)
     dump_to_file("sidequest_apps.json", merged_oculus_apps)
