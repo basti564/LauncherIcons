@@ -530,12 +530,7 @@ def fetch_vive_business_covers(existing_apps: AppList) -> None:
     logging.info("Done fetching Vive Business app covers.")
 
 
-def fetch_sidequest_apps(existing_sidequest_apps: AppList, existing_oculus_apps: AppList) -> AppList:
-    logging.info("Fetching Sidequest apps...")
-    sidequest_folder = "sidequest_image"
-    os.makedirs(sidequest_folder, exist_ok=True)
-
-    # for oculus support
+def fetch_oculus_app_details_and_download_covers(oculus_app_id: str) -> App:
     landscape_folder = "oculus_landscape"
     portrait_folder = "oculus_portrait"
     square_folder = "oculus_square"
@@ -545,6 +540,70 @@ def fetch_sidequest_apps(existing_sidequest_apps: AppList, existing_oculus_apps:
     os.makedirs(portrait_folder, exist_ok=True)
     os.makedirs(square_folder, exist_ok=True)
     os.makedirs(icon_folder, exist_ok=True)
+
+    store_stuff_variables = {
+        "applicationID": oculus_app_id
+    }
+    store_stuff_graphql_request_payload = {
+        "doc_id": "8571881679548867",
+        "access_token": "OC|1076686279105243|",
+        "variables": json.dumps(store_stuff_variables)
+    }
+    store_stuff_response = session.post("https://graph.oculus.com/graphql",
+                                        data=store_stuff_graphql_request_payload)
+    store_stuff_data = store_stuff_response.json()
+
+    app_name = store_stuff_data["data"]["node"]["display_name"]
+
+    app_details_api_url = f"https://graph.oculus.com/graphql?access_token=OC|1076686279105243|&doc_id=3828663700542720&variables={{\"applicationID\":\"{oculus_app_id}\"}}"
+
+    app_details_response = session.get(app_details_api_url)
+    app_details_data = app_details_response.json()
+    latest_supported_binary = app_details_data["data"]["node"][
+        "release_channels"
+    ]["nodes"][0]["latest_supported_binary"]
+
+    if latest_supported_binary is not None:
+        app_binary_info_api_url = f"https://graph.oculus.com/graphql?doc=query ($params: AppBinaryInfoArgs!) {{ app_binary_info(args: $params) {{ info {{ binary {{ ... on AndroidBinary {{ id package_name version_code asset_files {{ edges {{ node {{ ... on AssetFile {{ file_name uri size }} }} }} }} }} }} }} }} }}&variables={{\"params\":{{\"app_params\":[{{\"app_id\":\"{oculus_app_id}\",\"version_code\":\"{latest_supported_binary['version_code']}\"}}]}}}}&access_token=OC|1317831034909742|"
+
+        app_binary_info_response = session.get(app_binary_info_api_url)
+        app_binary_info_data = app_binary_info_response.json()
+        package_name = app_binary_info_data["data"]["app_binary_info"]["info"][0]["binary"][
+            "package_name"]
+
+    translations = \
+        store_stuff_data["data"]["node"]["lastRevision"]["nodes"][0]["pdp_metadata"]["translations"]["nodes"]
+    for translation in translations:
+        if translation["locale"] == "en_US":
+            for image in translation["images"]["nodes"]:
+                folder = ""
+                match image["image_type"]:
+                    case "APP_IMG_COVER_LANDSCAPE":
+                        folder = landscape_folder
+                    case "APP_IMG_COVER_SQUARE":
+                        folder = square_folder
+                    case "APP_IMG_COVER_PORTRAIT":
+                        folder = portrait_folder
+                    case "APP_IMG_HERO":
+                        pass
+                    case "APP_IMG_ICON":
+                        folder = icon_folder
+                    case "APP_IMG_SMALL_LANDSCAPE":
+                        pass
+                    case "APP_IMG_LOGO_TRANSPARENT":
+                        pass
+                    case _:
+                        pass
+                if folder:
+                    image_path = os.path.join(folder, f"{package_name}.jpg")
+                    download_image(image["uri"], image_path)
+    return App(appName=app_name, packageName=package_name, id=oculus_app_id)
+
+
+def fetch_sidequest_apps(existing_sidequest_apps: AppList, existing_oculus_apps: AppList):
+    logging.info("Fetching Sidequest apps...")
+    sidequest_folder = "sidequest_image"
+    os.makedirs(sidequest_folder, exist_ok=True)
 
     base_url = "https://api.sidequestvr.com/search-apps"
     page = 0
@@ -596,68 +655,7 @@ def fetch_sidequest_apps(existing_sidequest_apps: AppList, existing_oculus_apps:
                 "https://www.oculus.com/experiences/quest/"):
             labrador_url = app["labrador_url"]
             oculus_app_id = re.search(r'/quest/(\d+)', labrador_url).group(1)
-            store_stuff_variables = {
-                "applicationID": oculus_app_id
-            }
-            store_stuff_graphql_request_payload = {
-                "doc_id": "8571881679548867",
-                "access_token": "OC|1076686279105243|",
-                "variables": json.dumps(store_stuff_variables)
-            }
-            store_stuff_response = session.post("https://graph.oculus.com/graphql",
-                                                data=store_stuff_graphql_request_payload)
-            store_stuff_data = store_stuff_response.json()
-
-            app_name = store_stuff_data["data"]["node"]["display_name"]
-
-            # square_url = store_stuff_data["data"]["node"]["cover_square_image"]["uri"]
-
-            app_details_api_url = f"https://graph.oculus.com/graphql?access_token=OC|1076686279105243|&doc_id=3828663700542720&variables={{\"applicationID\":\"{oculus_app_id}\"}}"
-
-            try:
-                app_details_response = session.get(app_details_api_url)
-                app_details_data = app_details_response.json()
-                latest_supported_binary = app_details_data["data"]["node"][
-                    "release_channels"
-                ]["nodes"][0]["latest_supported_binary"]
-
-                if latest_supported_binary is not None:
-                    app_binary_info_api_url = f"https://graph.oculus.com/graphql?doc=query ($params: AppBinaryInfoArgs!) {{ app_binary_info(args: $params) {{ info {{ binary {{ ... on AndroidBinary {{ id package_name version_code asset_files {{ edges {{ node {{ ... on AssetFile {{ file_name uri size }} }} }} }} }} }} }} }} }}&variables={{\"params\":{{\"app_params\":[{{\"app_id\":\"{oculus_app_id}\",\"version_code\":\"{latest_supported_binary['version_code']}\"}}]}}}}&access_token=OC|1317831034909742|"
-
-                    app_binary_info_response = session.get(app_binary_info_api_url)
-                    app_binary_info_data = app_binary_info_response.json()
-                    package_name = app_binary_info_data["data"]["app_binary_info"]["info"][0]["binary"][
-                        "package_name"]
-            except Exception as error:
-                logging.error(f"Error: {error}")
-
-            translations = \
-                store_stuff_data["data"]["node"]["lastRevision"]["nodes"][0]["pdp_metadata"]["translations"]["nodes"]
-            for translation in translations:
-                if translation["locale"] == "en_US":
-                    for image in translation["images"]["nodes"]:
-                        folder = ""
-                        match image["image_type"]:
-                            case "APP_IMG_COVER_LANDSCAPE":
-                                folder = landscape_folder
-                            case "APP_IMG_COVER_SQUARE":
-                                folder = square_folder
-                            case "APP_IMG_COVER_PORTRAIT":
-                                folder = portrait_folder
-                            case "APP_IMG_HERO":
-                                pass
-                            case "APP_IMG_ICON":
-                                folder = icon_folder
-                            case "APP_IMG_SMALL_LANDSCAPE":
-                                pass
-                            case "APP_IMG_LOGO_TRANSPARENT":
-                                pass
-                            case _:
-                                pass
-                        if folder:
-                            image_path = os.path.join(folder, f"{package_name}.jpg")
-                            download_image(image["uri"], image_path)
-            new_oculus_app = App(appName=app_name, packageName=package_name, id=app_id)
+            new_oculus_app = fetch_oculus_app_details_and_download_covers(oculus_app_id)
             new_oculus_apps.append(new_oculus_app)
             logging.info(f"Downloaded images for {app_name}")
 
@@ -677,7 +675,6 @@ def fetch_sidequest_apps(existing_sidequest_apps: AppList, existing_oculus_apps:
 
     logging.info("Sidequest apps fetched successfully.")
 
-    return merged_sidequest_apps
 
 if __name__ == "__main__":
     # existing_pico_apps = load_from_file("pico_apps.json")
@@ -695,4 +692,4 @@ if __name__ == "__main__":
 
     existing_oculus_apps = load_from_file("oculus_apps.json")
     existing_sidequest_apps = load_from_file("sidequest_apps.json")
-    sidequest_app_data = fetch_sidequest_apps(existing_sidequest_apps, existing_oculus_apps)
+    fetch_sidequest_apps(existing_sidequest_apps, existing_oculus_apps)
