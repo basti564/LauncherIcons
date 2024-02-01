@@ -650,6 +650,8 @@ def fetch_sidequest_apps(existing_sidequest_apps: AppList, existing_oculus_apps:
     new_apps = []
     new_oculus_apps = []
 
+    new_oculus_app_ids = []
+
     for app in app_data_list:
         app_id = str(app["apps_id"])
         app_name = app["name"]
@@ -660,17 +662,19 @@ def fetch_sidequest_apps(existing_sidequest_apps: AppList, existing_oculus_apps:
                 "https://www.oculus.com/experiences/quest/"):
             labrador_url = app["labrador_url"]
             oculus_app_id = re.search(r'/quest/(\d+)', labrador_url).group(1)
-            new_oculus_app = fetch_oculus_app_details_and_download_covers(oculus_app_id)
-            new_oculus_apps.append(new_oculus_app)
-            logging.info(f"Downloaded images for {app_name}")
-
+            new_oculus_app_ids.append(oculus_app_id)
         else:
             new_app = App(appName=app_name, packageName=package_name, id=app_id)
             new_apps.append(new_app)
 
-            image_path = os.path.join(sidequest_folder, f"{package_name}.jpg")
-            download_image(image_url, image_path)
-            logging.info(f"Downloaded image for {app_name}")
+            #image_path = os.path.join(sidequest_folder, f"{package_name}.jpg")
+            #download_image(image_url, image_path)
+            #logging.info(f"Downloaded image for {app_name}")
+
+    for oculus_app_id in new_oculus_app_ids:
+        new_oculus_app = fetch_oculus_app_details_and_download_covers(oculus_app_id)
+        new_oculus_apps.append(new_oculus_app)
+        logging.info(f"Downloaded images for {new_oculus_app.appName}")
 
     merged_sidequest_apps = merge_apps(existing_sidequest_apps, new_apps)
     dump_to_file("sidequest_apps.json", merged_sidequest_apps)
