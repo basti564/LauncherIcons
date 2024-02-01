@@ -15,7 +15,7 @@ PICO_HEADERS = {
 }
 
 
-def merge_apps(existing_apps, new_apps):
+def merge_apps(existing_apps: list, new_apps: list) -> list:
     logging.info("Merging existing and new apps...")
     existing_packages = {app["packageName"] for app in existing_apps}
     merged_data = []
@@ -32,7 +32,7 @@ def merge_apps(existing_apps, new_apps):
     return merged_data
 
 
-def fetch_pico_apps(existing_apps):
+def fetch_pico_apps(existing_apps: list) -> list:
     logging.info("Fetching Pico apps...")
 
     pico_options = {
@@ -93,7 +93,7 @@ def fetch_pico_apps(existing_apps):
     return merged_data
 
 
-def fetch_oculus_apps(existing_apps):
+def fetch_oculus_apps(existing_apps: list) -> None:
     logging.info("Fetching Oculus apps...")
     oculus_options = {
         "url": "https://oculusdb.rui2015.me/api/v1/allapps",
@@ -121,7 +121,7 @@ def fetch_oculus_apps(existing_apps):
     logging.info("Oculus apps fetched successfully.")
 
 
-def fetch_oculus_apps_with_covers(existing_apps):
+def fetch_oculus_apps_with_covers(existing_apps: list) -> None:
     logging.info("Fetching Oculus apps...")
 
     section_ids = ["1888816384764129", "174868819587665"]
@@ -207,7 +207,7 @@ def fetch_oculus_apps_with_covers(existing_apps):
     logging.info("Oculus apps fetched successfully.")
 
 
-def download_image(url, filename):
+def download_image(url: str, filename: str) -> None:
     with requests.get(url, stream=True) as response:
         response.raise_for_status()
         with open(filename, "wb") as f:
@@ -215,7 +215,7 @@ def download_image(url, filename):
                 f.write(chunk)
 
 
-def fetch_pico_covers(app_data):
+def fetch_pico_covers(app_data: list) -> None:
     logging.info("Fetching Pico app covers...")
     if not os.path.exists("pico_square"):
         os.makedirs("pico_square")
@@ -258,14 +258,14 @@ def fetch_pico_covers(app_data):
     logging.info("All Pico app covers downloaded.")
 
 
-def download_image_webp(url, filename):
+def download_image_webp(url: str, filename: str) -> None:
     with requests.get(url, stream=True) as response:
         response.raise_for_status()
         image = Image.open(io.BytesIO(response.content))
         image.save(filename, "WEBP")
 
 
-def fetch_viveport_covers(existing_apps):
+def fetch_viveport_covers(existing_apps: list) -> None:
     logging.info("Fetching Viveport app covers...")
 
     small_folder = "viveport_small"
@@ -396,7 +396,7 @@ def fetch_viveport_covers(existing_apps):
     logging.info("Done fetching Viveport app covers.")
 
 
-def fetch_vive_business_covers(existing_apps):
+def fetch_vive_business_covers(existing_apps: list) -> None:
     logging.info("Fetching Vive Business app covers...")
 
     small_folder = "vive_business_small"
