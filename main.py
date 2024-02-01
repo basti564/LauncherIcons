@@ -76,7 +76,7 @@ def fetch_pico_apps(existing_apps: AppList) -> AppList:
 
     page = 1
     has_more = True
-    app_data = []
+    pico_app_data = []
 
     while has_more:
         pico_options["params"]["page"] = str(page)
@@ -100,7 +100,7 @@ def fetch_pico_apps(existing_apps: AppList) -> AppList:
                 if app.get("package_name")
             ]
 
-            app_data.extend(new_apps)
+            pico_app_data.extend(new_apps)
             has_more = response_data["data"].get("has_more", False)
 
             if has_more:
@@ -109,7 +109,7 @@ def fetch_pico_apps(existing_apps: AppList) -> AppList:
             logging.warning("No data found on page.")
             has_more = False
 
-    merged_data = merge_apps(existing_apps, app_data)
+    merged_data = merge_apps(existing_apps, pico_app_data)
 
     dump_to_file("pico_apps.json", merged_data)
 
@@ -204,7 +204,7 @@ def download_image(url: str, filename: str, retries: int = 3, timeout: int = 5) 
     logging.error(f"Failed to download {filename} after {retries} attempts.")
 
 
-def fetch_pico_covers(app_data: AppList) -> None:
+def fetch_pico_covers(pico_app_data: AppList) -> None:
     logging.info("Fetching Pico app covers...")
     if not os.path.exists("pico_square"):
         os.makedirs("pico_square")
@@ -213,7 +213,7 @@ def fetch_pico_covers(app_data: AppList) -> None:
 
     urls = [
         f"https://appstore-us.picovr.com/api/app/v1/item/info?app_language=en&device_name=A8110&item_id={app.id}&manifest_version_code=300800000"
-        for app in app_data
+        for app in pico_app_data
     ]
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
@@ -223,7 +223,7 @@ def fetch_pico_covers(app_data: AppList) -> None:
         for url in urls:
             futures.append(executor.submit(session.post, url, headers=PICO_HEADERS))
 
-        for future, app in zip(futures, app_data):
+        for future, app in zip(futures, pico_app_data):
             try:
                 response = future.result()
                 response.raise_for_status()
@@ -254,15 +254,15 @@ def download_image_webp(url: str, filename: str) -> None:
         image.save(filename, "WEBP")
 
 
-def download_vive_images(app_data: Dict[str, any],
+def download_vive_images(vive_app_data: Dict[str, any],
                          small_folder: str,
                          medium_folder: str,
                          large_folder: str,
                          square_folder: str,
                          executor: ThreadPoolExecutor) -> App:
-    package_name = app_data["package_name"]
-    app_name = app_data["title"]
-    thumbnails = app_data["thumbnails"]
+    package_name = vive_app_data["package_name"]
+    app_name = vive_app_data["title"]
+    thumbnails = vive_app_data["thumbnails"]
 
     # Submit download tasks to the executor
     executor.submit(
@@ -291,7 +291,7 @@ def download_vive_images(app_data: Dict[str, any],
     return App(
         appName=app_name,
         packageName=package_name,
-        id=app_data.get("id", "")
+        id=vive_app_data.get("id", "")
     )
 
 
@@ -615,7 +615,7 @@ def fetch_apps_concurrently(app_ids: List[str], fetch_function: Callable[[str], 
     return results
 
 
-def fetch_sidequest_apps(existing_sidequest_apps: AppList, existing_oculus_apps: AppList):
+def fetch_sidequest_apps(sidequest_app_data: AppList, oculus_app_data: AppList):
     logging.info("Fetching Sidequest apps...")
     sidequest_folder = "sidequest_image"
     os.makedirs(sidequest_folder, exist_ok=True)
@@ -649,7 +649,6 @@ def fetch_sidequest_apps(existing_sidequest_apps: AppList, existing_oculus_apps:
         data = response.json()
 
         if not data["data"]:
-            has_more = False
             break
 
         app_data_list.extend(data["data"])
@@ -682,10 +681,10 @@ def fetch_sidequest_apps(existing_sidequest_apps: AppList, existing_oculus_apps:
 
     fetch_apps_concurrently(new_oculus_app_ids, fetch_oculus_app_details_and_download_covers)
 
-    merged_sidequest_apps = merge_apps(existing_sidequest_apps, new_apps)
+    merged_sidequest_apps = merge_apps(sidequest_app_data, new_apps)
     dump_to_file("sidequest_apps.json", merged_sidequest_apps)
 
-    merged_oculus_apps = merge_apps(existing_oculus_apps, new_apps)
+    merged_oculus_apps = merge_apps(oculus_app_data, new_apps)
     dump_to_file("oculus_apps.json", merged_oculus_apps)
 
     logging.info("Sidequest apps fetched successfully.")
