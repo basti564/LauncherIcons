@@ -289,6 +289,7 @@ def download_oculus_app_covers_by_id(oculus_app_id: str) -> App | None:
                 if folder:
                     image_path = os.path.join(folder, f"{package_name}.jpg")
                     download_image(image["uri"], image_path)
+    logging.info(f"Downloaded images for {package_name}")
     return App(appName=app_name, packageName=package_name, id=oculus_app_id)
 
 
