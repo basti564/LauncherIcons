@@ -33,6 +33,15 @@ def merge_apps(existing_apps: List[Dict[str, Any]], new_apps: List[Dict[str, Any
     return merged_data
 
 
+def dump_to_file(filename: str, data: Any) -> None:
+    try:
+        with open(filename, "w") as file:
+            json.dump(data, file)
+        logging.info(f"Data saved to {filename}")
+    except IOError as e:
+        logging.error(f"Failed to save data to {filename}: {e}")
+
+
 def fetch_pico_apps(existing_apps: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     logging.info("Fetching Pico apps...")
 
@@ -87,8 +96,7 @@ def fetch_pico_apps(existing_apps: List[Dict[str, Any]]) -> List[Dict[str, Any]]
 
     merged_data = merge_apps(existing_apps, app_data)
 
-    with open("pico_apps.json", "w") as f:
-        json.dump(merged_data, f)
+    dump_to_file("pico_apps.json", merged_data)
 
     logging.info("Pico apps fetched successfully.")
     return merged_data
@@ -115,10 +123,8 @@ def fetch_oculus_apps(existing_apps: List[Dict[str, Any]]) -> None:
         for app in data
         if app.get("packageName") and "rift" not in app.get("packageName")
     ]
-    app_data = merge_apps(existing_apps, new_apps)
 
-    with open("oculus_apps.json", "w") as f:
-        json.dump(app_data, f)
+    dump_to_file("oculus_apps.json", merge_apps(existing_apps, new_apps))
 
     logging.info("Oculus apps fetched successfully.")
 '''
@@ -202,10 +208,7 @@ def fetch_oculus_apps_with_covers(existing_apps: List[Dict[str, Any]]) -> None:
                 except Exception as error:
                     logging.error(f"Error: {error}")
 
-    merged_apps = merge_apps(existing_apps, new_apps)
-
-    with open("oculus_apps.json", "w") as f:
-        json.dump(merged_apps, f)
+    dump_to_file("oculus_apps.json", merge_apps(existing_apps, new_apps))
 
     logging.info("Oculus apps fetched successfully.")
 
@@ -391,10 +394,7 @@ def fetch_viveport_covers(existing_apps: List[Dict[str, Any]]) -> None:
             except Exception as error:
                 logging.error(f"Error: {error}")
 
-    merged_apps = merge_apps(existing_apps, new_apps)
-
-    with open("viveport_apps.json", "w") as f:
-        json.dump(merged_apps, f)
+    dump_to_file("viveport_apps.json", merge_apps(existing_apps, new_apps))
 
     logging.info("Done fetching Viveport app covers.")
 
@@ -503,10 +503,7 @@ def fetch_vive_business_covers(existing_apps: List[Dict[str, Any]]) -> None:
             except Exception as error:
                 logging.error(f"Error: {error}")
 
-    merged_apps = merge_apps(existing_apps, new_apps)
-
-    with open("vive_business_apps.json", "w") as f:
-        json.dump(merged_apps, f)
+    dump_to_file("vive_business_apps.json", merge_apps(existing_apps, new_apps))
 
     logging.info("Done fetching Vive Business app covers.")
 
