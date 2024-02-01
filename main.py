@@ -17,7 +17,7 @@ PICO_HEADERS = {
 
 def merge_apps(existing_apps, new_apps):
     logging.info("Merging existing and new apps...")
-    existing_packages = {app['packageName'] for app in existing_apps}
+    existing_packages = {app["packageName"] for app in existing_apps}
     merged_data = []
     for new_app in new_apps:
         package_name = new_app["packageName"]
@@ -26,7 +26,7 @@ def merge_apps(existing_apps, new_apps):
         app_data = {
             "appName": new_app.get("appName", ""),
             "packageName": package_name,
-            "id": new_app.get("id", "")
+            "id": new_app.get("id", ""),
         }
         merged_data.append(app_data)
     return merged_data
@@ -59,7 +59,11 @@ def fetch_pico_apps(existing_apps):
         response = session.request(**pico_options, headers=PICO_HEADERS)
         response_data = response.json()
 
-        if "data" in response_data and response_data["data"] and "items" in response_data["data"]:
+        if (
+                "data" in response_data
+                and response_data["data"]
+                and "items" in response_data["data"]
+        ):
             new_apps = [
                 dict(
                     app,
@@ -135,45 +139,63 @@ def fetch_oculus_apps_with_covers(existing_apps):
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         for section_id in section_ids:
-            items_api_url = f"https://graph.oculus.com/graphql?forced_locale=en_US&doc_id=4743589559102018&access_token=OC|1076686279105243|&variables={{\"sectionId\":\"{section_id}\",\"sortOrder\":null,\"sectionItemCount\":1000}}"
+            items_api_url = f'https://graph.oculus.com/graphql?forced_locale=en_US&doc_id=4743589559102018&access_token=OC|1076686279105243|&variables={{"sectionId":"{section_id}","sortOrder":null,"sectionItemCount":1000}}'
 
             response = session.get(items_api_url)
             response_data = response.json()
 
-            edges = response_data['data']['node']['all_items']['edges']
+            edges = response_data["data"]["node"]["all_items"]["edges"]
 
             for edge in edges:
-                node = edge['node']
+                node = edge["node"]
                 app_details_api_url = f"https://graph.oculus.com/graphql?access_token=OC|1076686279105243|&doc_id=3828663700542720&variables={{\"applicationID\":\"{node['id']}\"}}"
 
                 try:
                     app_details_response = session.get(app_details_api_url)
                     app_details_data = app_details_response.json()
-                    latest_supported_binary = app_details_data['data']['node']['release_channels']['nodes'][0]['latest_supported_binary']
+                    latest_supported_binary = app_details_data["data"]["node"][
+                        "release_channels"
+                    ]["nodes"][0]["latest_supported_binary"]
 
                     if latest_supported_binary is not None:
                         app_binary_info_api_url = f"https://graph.oculus.com/graphql?doc=query ($params: AppBinaryInfoArgs!) {{ app_binary_info(args: $params) {{ info {{ binary {{ ... on AndroidBinary {{ id package_name version_code asset_files {{ edges {{ node {{ ... on AssetFile {{ file_name uri size }} }} }} }} }} }} }} }} }}&variables={{\"params\":{{\"app_params\":[{{\"app_id\":\"{node['id']}\",\"version_code\":\"{latest_supported_binary['version_code']}\"}}]}}}}&access_token=OC|1317831034909742|"
 
                         app_binary_info_response = session.get(app_binary_info_api_url)
                         app_binary_info_data = app_binary_info_response.json()
-                        package_name = app_binary_info_data['data']['app_binary_info']['info'][0]['binary']['package_name']
-                        display_name = node['display_name']
+                        package_name = app_binary_info_data["data"]["app_binary_info"][
+                            "info"
+                        ][0]["binary"]["package_name"]
+                        display_name = node["display_name"]
 
-                        landscape_url = node['cover_landscape_image']['uri']
-                        portrait_url = node['cover_portrait_image']['uri']
-                        square_url = node['cover_square_image']['uri']
+                        landscape_url = node["cover_landscape_image"]["uri"]
+                        portrait_url = node["cover_portrait_image"]["uri"]
+                        square_url = node["cover_square_image"]["uri"]
 
-                        executor.submit(download_image, landscape_url, os.path.join(landscape_folder, f"{package_name}.jpg"))
-                        executor.submit(download_image, portrait_url, os.path.join(portrait_folder, f"{package_name}.jpg"))
-                        executor.submit(download_image, square_url, os.path.join(square_folder, f"{package_name}.jpg"))
+                        executor.submit(
+                            download_image,
+                            landscape_url,
+                            os.path.join(landscape_folder, f"{package_name}.jpg"),
+                        )
+                        executor.submit(
+                            download_image,
+                            portrait_url,
+                            os.path.join(portrait_folder, f"{package_name}.jpg"),
+                        )
+                        executor.submit(
+                            download_image,
+                            square_url,
+                            os.path.join(square_folder, f"{package_name}.jpg"),
+                        )
 
                         logging.info(f"Downloaded images for {package_name}")
 
-                        new_apps.append({
-                            "appName": display_name,
-                            "packageName": package_name,
-                            "id": node['id']
-                        })
+                        new_apps.append(
+                            {
+                                "appName": display_name,
+                                "packageName": package_name,
+                                "id": node["id"],
+                            }
+                        )
 
                 except Exception as error:
                     logging.error(f"Error: {error}")
@@ -243,7 +265,7 @@ def download_image_webp(url, filename):
         response.raise_for_status()
         image = Image.open(io.BytesIO(response.content))
         # Convert and save the image in webp format
-        image.save(filename, 'WEBP')
+        image.save(filename, "WEBP")
 
 
 def fetch_viveport_covers(existing_apps):
@@ -261,7 +283,7 @@ def fetch_viveport_covers(existing_apps):
     os.makedirs(square_folder, exist_ok=True)
 
     # GraphQL query and variables
-    graphql_query = '''
+    graphql_query = """
     query getProduct(
     $category_id: String
     $app_type: [String]
@@ -287,19 +309,14 @@ def fetch_viveport_covers(existing_apps):
         }
     }
     }
-    '''
+    """
 
     graphql_variables = {
         "category_id": 277,
-        "app_type": [
-            "5"
-        ],
-        "prod_type": [
-            "375",
-            "377"
-        ],
+        "app_type": ["5"],
+        "prod_type": ["375", "377"],
         "pageSize": 9999,
-        "currentPage": 1
+        "currentPage": 1,
     }
 
     graphql_url = "https://www.viveport.com/graphql"
@@ -308,12 +325,18 @@ def fetch_viveport_covers(existing_apps):
     # Fetch app IDs
     app_ids = []
     while True:
-        response = session.post(graphql_url, json={"query": graphql_query, "variables": graphql_variables}, headers=headers)
+        response = session.post(
+            graphql_url,
+            json={"query": graphql_query, "variables": graphql_variables},
+            headers=headers,
+        )
         response_data = response.json()
 
         app_ids += [item["sku"] for item in response_data["data"]["products"]["items"]]
 
-        logging.info(f"Fetched app IDs from page {graphql_variables['currentPage']} of {response_data['data']['products']['page_info']['total_pages']}")
+        logging.info(
+            f"Fetched app IDs from page {graphql_variables['currentPage']} of {response_data['data']['products']['page_info']['total_pages']}"
+        )
 
         total_pages = response_data["data"]["products"]["page_info"]["total_pages"]
         if graphql_variables["currentPage"] >= total_pages:
@@ -331,9 +354,11 @@ def fetch_viveport_covers(existing_apps):
                     "show_coming_soon": True,
                     "content_genus": "all",
                     "subscription_only": 1,
-                    "include_unpublished": True
+                    "include_unpublished": True,
                 }
-                response = session.post("https://www.viveport.com/api/cms/v4/mobiles/a", json=post_data)
+                response = session.post(
+                    "https://www.viveport.com/api/cms/v4/mobiles/a", json=post_data
+                )
                 response_data = response.json()
 
                 app_data = response_data["contents"][0]["apps"][0]
@@ -341,18 +366,32 @@ def fetch_viveport_covers(existing_apps):
                 app_name = app_data["title"]
                 thumbnails = app_data["thumbnails"]
 
-                executor.submit(download_image_webp, thumbnails["small"]["url"], os.path.join(small_folder, f"{package_name}.webp"))
-                executor.submit(download_image_webp, thumbnails["medium"]["url"], os.path.join(medium_folder, f"{package_name}.webp"))
-                executor.submit(download_image_webp, thumbnails["large"]["url"], os.path.join(large_folder, f"{package_name}.webp"))
-                executor.submit(download_image_webp, thumbnails["square"]["url"], os.path.join(square_folder, f"{package_name}.webp"))
+                executor.submit(
+                    download_image_webp,
+                    thumbnails["small"]["url"],
+                    os.path.join(small_folder, f"{package_name}.webp"),
+                )
+                executor.submit(
+                    download_image_webp,
+                    thumbnails["medium"]["url"],
+                    os.path.join(medium_folder, f"{package_name}.webp"),
+                )
+                executor.submit(
+                    download_image_webp,
+                    thumbnails["large"]["url"],
+                    os.path.join(large_folder, f"{package_name}.webp"),
+                )
+                executor.submit(
+                    download_image_webp,
+                    thumbnails["square"]["url"],
+                    os.path.join(square_folder, f"{package_name}.webp"),
+                )
 
                 logging.info(f"Downloaded images for {package_name}")
 
-                new_apps.append({
-                    "appName": app_name,
-                    "packageName": package_name,
-                    "id": app_id
-                })
+                new_apps.append(
+                    {"appName": app_name, "packageName": package_name, "id": app_id}
+                )
             except Exception as error:
                 logging.error(f"Error: {error}")
 
@@ -379,7 +418,7 @@ def fetch_vive_business_covers(existing_apps):
     os.makedirs(square_folder, exist_ok=True)
 
     # GraphQL query and variables
-    graphql_query = '''
+    graphql_query = """
     query getProductAll($pageSize: Int, $currentPage: Int) {
       products(filter: {}, pageSize: $pageSize, currentPage: $currentPage) {
         total_count
@@ -393,12 +432,9 @@ def fetch_vive_business_covers(existing_apps):
         __typename
       }
     }
-    '''
+    """
 
-    graphql_variables = {
-        "pageSize": 9999,
-        "currentPage": 1
-    }
+    graphql_variables = {"pageSize": 9999, "currentPage": 1}
 
     graphql_url = "https://business.vive.com/graphql"
     headers = {"Content-Type": "application/json"}
@@ -406,12 +442,22 @@ def fetch_vive_business_covers(existing_apps):
     # Fetch app IDs
     app_ids = []
     while True:
-        response = requests.post(graphql_url, json={"query": graphql_query, "variables": graphql_variables}, headers=headers)
+        response = requests.post(
+            graphql_url,
+            json={"query": graphql_query, "variables": graphql_variables},
+            headers=headers,
+        )
         response_data = response.json()
 
-        app_ids += [item["sku"] for item in response_data["data"]["products"]["items"] if item['deviceType'] == '1_']
+        app_ids += [
+            item["sku"]
+            for item in response_data["data"]["products"]["items"]
+            if item["deviceType"] == "1_"
+        ]
 
-        logging.info(f"Fetched app IDs from page {graphql_variables['currentPage']} of {response_data['data']['products']['page_info']['total_pages']}")
+        logging.info(
+            f"Fetched app IDs from page {graphql_variables['currentPage']} of {response_data['data']['products']['page_info']['total_pages']}"
+        )
 
         total_pages = response_data["data"]["products"]["page_info"]["total_pages"]
         if graphql_variables["currentPage"] >= total_pages:
@@ -424,13 +470,11 @@ def fetch_vive_business_covers(existing_apps):
     with concurrent.futures.ThreadPoolExecutor() as executor:
         for app_id in app_ids:
             try:
-                post_data = {
-                    "app_ids": [app_id],
-                    "product_type": 5,
-                    "cnty": "US"
-                }
+                post_data = {"app_ids": [app_id], "product_type": 5, "cnty": "US"}
 
-                response = requests.post("https://business.vive.com/api/cms/v4/mobiles/a", json=post_data)
+                response = requests.post(
+                    "https://business.vive.com/api/cms/v4/mobiles/a", json=post_data
+                )
                 response_data = response.json()
 
                 app_data = response_data["contents"][0]["apps"][0]
@@ -438,18 +482,32 @@ def fetch_vive_business_covers(existing_apps):
                 app_name = app_data["title"]
                 thumbnails = app_data["thumbnails"]
 
-                executor.submit(download_image_webp, thumbnails["small"]["url"], os.path.join(small_folder, f"{package_name}.webp"))
-                executor.submit(download_image_webp, thumbnails["medium"]["url"], os.path.join(medium_folder, f"{package_name}.webp"))
-                executor.submit(download_image_webp, thumbnails["large"]["url"], os.path.join(large_folder, f"{package_name}.webp"))
-                executor.submit(download_image_webp, thumbnails["square"]["url"], os.path.join(square_folder, f"{package_name}.webp"))
+                executor.submit(
+                    download_image_webp,
+                    thumbnails["small"]["url"],
+                    os.path.join(small_folder, f"{package_name}.webp"),
+                )
+                executor.submit(
+                    download_image_webp,
+                    thumbnails["medium"]["url"],
+                    os.path.join(medium_folder, f"{package_name}.webp"),
+                )
+                executor.submit(
+                    download_image_webp,
+                    thumbnails["large"]["url"],
+                    os.path.join(large_folder, f"{package_name}.webp"),
+                )
+                executor.submit(
+                    download_image_webp,
+                    thumbnails["square"]["url"],
+                    os.path.join(square_folder, f"{package_name}.webp"),
+                )
 
                 logging.info(f"Downloaded images for {package_name}")
 
-                new_apps.append({
-                    "appName": app_name,
-                    "packageName": package_name,
-                    "id": app_id
-                })
+                new_apps.append(
+                    {"appName": app_name, "packageName": package_name, "id": app_id}
+                )
             except Exception as error:
                 logging.error(f"Error: {error}")
 
