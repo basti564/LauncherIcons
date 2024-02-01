@@ -16,7 +16,7 @@ PICO_HEADERS: Dict[str, str] = {
 }
 
 
-def merge_apps(existing_apps: List[Dict[str, Any]], new_apps: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def merge_apps(existing_apps: List[Dict[str, str]], new_apps: List[Dict[str, Any]]) -> List[Dict[str, str]]:
     logging.info("Merging existing and new apps...")
     existing_packages = {app["packageName"] for app in existing_apps}
     merged_data = []
