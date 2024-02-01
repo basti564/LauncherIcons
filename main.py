@@ -5,7 +5,7 @@ import os
 import requests
 from PIL import Image
 import io
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any
 
 logging.basicConfig(level=logging.INFO)
 
@@ -16,7 +16,7 @@ PICO_HEADERS: Dict[str, str] = {
 }
 
 
-def merge_apps(existing_apps: List[Dict[str, Union[str, int]]], new_apps: List[Dict[str, Union[str, int]]]) -> List[Dict[str, Union[str, int]]]:
+def merge_apps(existing_apps: List[Dict[str, Any]], new_apps: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     logging.info("Merging existing and new apps...")
     existing_packages = {app["packageName"] for app in existing_apps}
     merged_data = []
