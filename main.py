@@ -164,14 +164,14 @@ def fetch_oculus_apps_with_covers(existing_apps: AppList) -> None:
     for section_id in section_ids:
         app_ids.extend([node['id'] for node in fetch_oculus_section_items(section_id)])
 
-    new_apps = fetch_apps_concurrently(app_ids, fetch_oculus_app_details_and_download_covers)
+    new_apps = fetch_apps_concurrently(app_ids, download_oculus_app_covers_by_id)
 
     dump_to_file("oculus_apps.json", merge_apps(existing_apps, new_apps))
 
     logging.info("Oculus apps fetched successfully.")
 
 
-def fetch_oculus_app_details_and_download_covers(oculus_app_id: str) -> App | None:
+def download_oculus_app_covers_by_id(oculus_app_id: str) -> App | None:
     landscape_folder = "oculus_landscape"
     portrait_folder = "oculus_portrait"
     square_folder = "oculus_square"
@@ -351,7 +351,7 @@ def fetch_sidequest_apps(sidequest_app_data: AppList, oculus_app_data: AppList):
             # download_image(image_url, image_path)
             # logging.info(f"Downloaded image for {app_name}")
 
-    fetch_apps_concurrently(new_oculus_app_ids, fetch_oculus_app_details_and_download_covers)
+    fetch_apps_concurrently(new_oculus_app_ids, download_oculus_app_covers_by_id)
 
     merged_sidequest_apps = merge_apps(sidequest_app_data, new_apps)
     dump_to_file("sidequest_apps.json", merged_sidequest_apps)
