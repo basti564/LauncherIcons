@@ -5,17 +5,18 @@ import os
 import requests
 from PIL import Image
 import io
+from typing import List, Dict, Any, Union
 
 logging.basicConfig(level=logging.INFO)
 
 session = requests.Session()
 
-PICO_HEADERS = {
+PICO_HEADERS: Dict[str, str] = {
     "User-Agent": "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 AppName/picovr_assistant_overseas AppVersion/10.3.0 AppVersionCode/100300 Package/com.picovr.global.AssistantPhone SystemType/iPad OSVersion/17.0"
 }
 
 
-def merge_apps(existing_apps: list, new_apps: list) -> list:
+def merge_apps(existing_apps: List[Dict[str, Union[str, int]]], new_apps: List[Dict[str, Union[str, int]]]) -> List[Dict[str, Union[str, int]]]:
     logging.info("Merging existing and new apps...")
     existing_packages = {app["packageName"] for app in existing_apps}
     merged_data = []
@@ -32,7 +33,7 @@ def merge_apps(existing_apps: list, new_apps: list) -> list:
     return merged_data
 
 
-def fetch_pico_apps(existing_apps: list) -> list:
+def fetch_pico_apps(existing_apps: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     logging.info("Fetching Pico apps...")
 
     pico_options = {
@@ -93,7 +94,7 @@ def fetch_pico_apps(existing_apps: list) -> list:
     return merged_data
 
 
-def fetch_oculus_apps(existing_apps: list) -> None:
+def fetch_oculus_apps(existing_apps: List[Dict[str, Any]]) -> None:
     logging.info("Fetching Oculus apps...")
     oculus_options = {
         "url": "https://oculusdb.rui2015.me/api/v1/allapps",
@@ -121,7 +122,7 @@ def fetch_oculus_apps(existing_apps: list) -> None:
     logging.info("Oculus apps fetched successfully.")
 
 
-def fetch_oculus_apps_with_covers(existing_apps: list) -> None:
+def fetch_oculus_apps_with_covers(existing_apps: List[Dict[str, Any]]) -> None:
     logging.info("Fetching Oculus apps...")
 
     section_ids = ["1888816384764129", "174868819587665"]
@@ -215,7 +216,7 @@ def download_image(url: str, filename: str) -> None:
                 f.write(chunk)
 
 
-def fetch_pico_covers(app_data: list) -> None:
+def fetch_pico_covers(app_data: List[Dict[str, Any]]) -> None:
     logging.info("Fetching Pico app covers...")
     if not os.path.exists("pico_square"):
         os.makedirs("pico_square")
@@ -265,7 +266,7 @@ def download_image_webp(url: str, filename: str) -> None:
         image.save(filename, "WEBP")
 
 
-def fetch_viveport_covers(existing_apps: list) -> None:
+def fetch_viveport_covers(existing_apps: List[Dict[str, Any]]) -> None:
     logging.info("Fetching Viveport app covers...")
 
     small_folder = "viveport_small"
@@ -396,7 +397,7 @@ def fetch_viveport_covers(existing_apps: list) -> None:
     logging.info("Done fetching Viveport app covers.")
 
 
-def fetch_vive_business_covers(existing_apps: list) -> None:
+def fetch_vive_business_covers(existing_apps: List[Dict[str, Any]]) -> None:
     logging.info("Fetching Vive Business app covers...")
 
     small_folder = "vive_business_small"
