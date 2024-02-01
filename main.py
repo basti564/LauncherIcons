@@ -94,6 +94,7 @@ def fetch_pico_apps(existing_apps: List[Dict[str, Any]]) -> List[Dict[str, Any]]
     return merged_data
 
 
+'''
 def fetch_oculus_apps(existing_apps: List[Dict[str, Any]]) -> None:
     logging.info("Fetching Oculus apps...")
     oculus_options = {
@@ -120,6 +121,7 @@ def fetch_oculus_apps(existing_apps: List[Dict[str, Any]]) -> None:
         json.dump(app_data, f)
 
     logging.info("Oculus apps fetched successfully.")
+'''
 
 
 def fetch_oculus_apps_with_covers(existing_apps: List[Dict[str, Any]]) -> None:
