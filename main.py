@@ -117,8 +117,7 @@ def fetch_pico_apps(existing_apps: AppList) -> AppList:
     return merged_data
 
 
-'''
-def fetch_oculus_apps(existing_apps: AppList) -> None:
+def fetch_oculusdb_apps(existing_apps: AppList) -> None:
     logging.info("Fetching Oculus apps...")
     oculus_options = {
         "url": "https://oculusdb.rui2015.me/api/v1/allapps",
@@ -141,7 +140,6 @@ def fetch_oculus_apps(existing_apps: AppList) -> None:
     dump_to_file("oculus_apps.json", merge_apps(existing_apps, new_apps))
 
     logging.info("Oculus apps fetched successfully.")
-'''
 
 
 def fetch_oculus_section_items(section_id: str) -> list:
