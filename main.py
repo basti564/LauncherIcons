@@ -667,9 +667,9 @@ def fetch_sidequest_apps(existing_sidequest_apps: AppList, existing_oculus_apps:
             new_app = App(appName=app_name, packageName=package_name, id=app_id)
             new_apps.append(new_app)
 
-            #image_path = os.path.join(sidequest_folder, f"{package_name}.jpg")
-            #download_image(image_url, image_path)
-            #logging.info(f"Downloaded image for {app_name}")
+            # image_path = os.path.join(sidequest_folder, f"{package_name}.jpg")
+            # download_image(image_url, image_path)
+            # logging.info(f"Downloaded image for {app_name}")
 
     for oculus_app_id in new_oculus_app_ids:
         new_oculus_app = fetch_oculus_app_details_and_download_covers(oculus_app_id)
