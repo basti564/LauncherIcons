@@ -271,6 +271,38 @@ def download_image_webp(url: str, filename: str) -> None:
         image.save(filename, "WEBP")
 
 
+def download_vive_images(app_data, small_folder, medium_folder, large_folder, square_folder, executor):
+    package_name = app_data["package_name"]
+    app_name = app_data["title"]
+    thumbnails = app_data["thumbnails"]
+
+    # Submit download tasks to the executor
+    executor.submit(
+        download_image_webp,
+        thumbnails["small"]["url"],
+        os.path.join(small_folder, f"{package_name}.webp"),
+    )
+    executor.submit(
+        download_image_webp,
+        thumbnails["medium"]["url"],
+        os.path.join(medium_folder, f"{package_name}.webp"),
+    )
+    executor.submit(
+        download_image_webp,
+        thumbnails["large"]["url"],
+        os.path.join(large_folder, f"{package_name}.webp"),
+    )
+    executor.submit(
+        download_image_webp,
+        thumbnails["square"]["url"],
+        os.path.join(square_folder, f"{package_name}.webp"),
+    )
+
+    logging.info(f"Downloaded images for {package_name}")
+
+    return {"appName": app_name, "packageName": package_name, "id": app_data.get("id", "")}
+
+
 def fetch_viveport_covers(existing_apps: List[Dict[str, Any]]) -> None:
     logging.info("Fetching Viveport app covers...")
 
@@ -361,36 +393,9 @@ def fetch_viveport_covers(existing_apps: List[Dict[str, Any]]) -> None:
                 response_data = response.json()
 
                 app_data = response_data["contents"][0]["apps"][0]
-                package_name = app_data["package_name"]
-                app_name = app_data["title"]
-                thumbnails = app_data["thumbnails"]
-
-                executor.submit(
-                    download_image_webp,
-                    thumbnails["small"]["url"],
-                    os.path.join(small_folder, f"{package_name}.webp"),
-                )
-                executor.submit(
-                    download_image_webp,
-                    thumbnails["medium"]["url"],
-                    os.path.join(medium_folder, f"{package_name}.webp"),
-                )
-                executor.submit(
-                    download_image_webp,
-                    thumbnails["large"]["url"],
-                    os.path.join(large_folder, f"{package_name}.webp"),
-                )
-                executor.submit(
-                    download_image_webp,
-                    thumbnails["square"]["url"],
-                    os.path.join(square_folder, f"{package_name}.webp"),
-                )
-
-                logging.info(f"Downloaded images for {package_name}")
-
-                new_apps.append(
-                    {"appName": app_name, "packageName": package_name, "id": app_id}
-                )
+                new_app = download_vive_images(app_data, small_folder, medium_folder, large_folder, square_folder,
+                                               executor)
+                new_apps.append(new_app)
             except Exception as error:
                 logging.error(f"Error: {error}")
 
@@ -470,36 +475,9 @@ def fetch_vive_business_covers(existing_apps: List[Dict[str, Any]]) -> None:
                 response_data = response.json()
 
                 app_data = response_data["contents"][0]["apps"][0]
-                package_name = app_data["package_name"]
-                app_name = app_data["title"]
-                thumbnails = app_data["thumbnails"]
-
-                executor.submit(
-                    download_image_webp,
-                    thumbnails["small"]["url"],
-                    os.path.join(small_folder, f"{package_name}.webp"),
-                )
-                executor.submit(
-                    download_image_webp,
-                    thumbnails["medium"]["url"],
-                    os.path.join(medium_folder, f"{package_name}.webp"),
-                )
-                executor.submit(
-                    download_image_webp,
-                    thumbnails["large"]["url"],
-                    os.path.join(large_folder, f"{package_name}.webp"),
-                )
-                executor.submit(
-                    download_image_webp,
-                    thumbnails["square"]["url"],
-                    os.path.join(square_folder, f"{package_name}.webp"),
-                )
-
-                logging.info(f"Downloaded images for {package_name}")
-
-                new_apps.append(
-                    {"appName": app_name, "packageName": package_name, "id": app_id}
-                )
+                new_app = download_vive_images(app_data, small_folder, medium_folder, large_folder, square_folder,
+                                               executor)
+                new_apps.append(new_app)
             except Exception as error:
                 logging.error(f"Error: {error}")
 
