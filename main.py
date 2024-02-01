@@ -536,10 +536,10 @@ def fetch_sidequest_apps(existing_sidequest_apps: AppList, existing_oculus_apps:
     os.makedirs(sidequest_folder, exist_ok=True)
 
     # for oculus support
-    landscape_folder = "meth_oculus_landscape"
-    portrait_folder = "meth_oculus_portrait"
-    square_folder = "meth_oculus_square"
-    icon_folder = "meth_oculus_icon"
+    landscape_folder = "oculus_landscape"
+    portrait_folder = "oculus_portrait"
+    square_folder = "oculus_square"
+    icon_folder = "oculus_icon"
 
     os.makedirs(landscape_folder, exist_ok=True)
     os.makedirs(portrait_folder, exist_ok=True)
