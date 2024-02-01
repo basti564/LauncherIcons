@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
-from typing import NamedTuple, List, Dict, TypedDict, Optional
+from typing import NamedTuple, List, Dict
 import json
 import logging
 import os
