@@ -161,28 +161,56 @@ def fetch_oculus_apps_with_covers(existing_apps: AppList) -> None:
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         for section_id in section_ids:
-            items_api_url = f'https://graph.oculus.com/graphql?forced_locale=en_US&doc_id=4743589559102018&access_token=OC|1076686279105243|&variables={{"sectionId":"{section_id}","sortOrder":null,"sectionItemCount":1000}}'
+            items_payload = {
+                "forced_locale": "en_US",
+                "doc_id": "4743589559102018",
+                "access_token": "OC|1076686279105243|",
+                "variables": json.dumps({
+                    "sectionId": section_id,
+                    "sortOrder": None,
+                    "sectionItemCount": 1000
+                })
+            }
 
-            response = session.get(items_api_url)
+            response = session.post("https://graph.oculus.com/graphql", data=items_payload)
             response_data = response.json()
 
             edges = response_data["data"]["node"]["all_items"]["edges"]
 
             for edge in edges:
                 node = edge["node"]
-                app_details_api_url = f"https://graph.oculus.com/graphql?access_token=OC|1076686279105243|&doc_id=3828663700542720&variables={{\"applicationID\":\"{node['id']}\"}}"
 
                 try:
-                    app_details_response = session.get(app_details_api_url)
+                    app_details_payload = {
+                        "access_token": "OC|1076686279105243|",
+                        "doc_id": "3828663700542720",
+                        "variables": json.dumps({"applicationID": node['id']})
+                    }
+
+                    app_details_response = session.post("https://graph.oculus.com/graphql", data=app_details_payload)
                     app_details_data = app_details_response.json()
                     latest_supported_binary = app_details_data["data"]["node"][
                         "release_channels"
                     ]["nodes"][0]["latest_supported_binary"]
 
                     if latest_supported_binary is not None:
-                        app_binary_info_api_url = f"https://graph.oculus.com/graphql?doc=query ($params: AppBinaryInfoArgs!) {{ app_binary_info(args: $params) {{ info {{ binary {{ ... on AndroidBinary {{ id package_name version_code asset_files {{ edges {{ node {{ ... on AssetFile {{ file_name uri size }} }} }} }} }} }} }} }} }}&variables={{\"params\":{{\"app_params\":[{{\"app_id\":\"{node['id']}\",\"version_code\":\"{latest_supported_binary['version_code']}\"}}]}}}}&access_token=OC|1317831034909742|"
+                        app_binary_info_variables = {
+                            "params": {
+                                "app_params": [{
+                                    "app_id": node['id'],
+                                    "version_code": latest_supported_binary['version_code']
+                                }]
+                            }
+                        }
 
-                        app_binary_info_response = session.get(app_binary_info_api_url)
+                        app_binary_info_payload = {
+                            "doc": "query ($params: AppBinaryInfoArgs!) { app_binary_info(args: $params) { info { binary { ... on AndroidBinary { id package_name version_code asset_files { edges { node { ... on AssetFile { file_name uri size } } } } } } } } }",
+                            "variables": json.dumps(app_binary_info_variables),
+                            "access_token": "OC|1317831034909742|"
+                        }
+
+                        app_binary_info_response = session.post("https://graph.oculus.com/graphql",
+                                                                json=app_binary_info_payload)
                         app_binary_info_data = app_binary_info_response.json()
                         package_name = app_binary_info_data["data"]["app_binary_info"][
                             "info"
@@ -555,18 +583,42 @@ def fetch_oculus_app_details_and_download_covers(oculus_app_id: str) -> App:
 
     app_name = store_stuff_data["data"]["node"]["display_name"]
 
-    app_details_api_url = f"https://graph.oculus.com/graphql?access_token=OC|1076686279105243|&doc_id=3828663700542720&variables={{\"applicationID\":\"{oculus_app_id}\"}}"
+    app_details_variables = {
+        "applicationID": oculus_app_id
+    }
+    app_details_graphql_request_payload = {
+        "doc_id": "3828663700542720",
+        "access_token": "OC|1076686279105243|",
+        "variables": json.dumps(app_details_variables)
+    }
 
-    app_details_response = session.get(app_details_api_url)
+    app_details_response = session.post("https://graph.oculus.com/graphql",
+                                        data=app_details_graphql_request_payload)
     app_details_data = app_details_response.json()
     latest_supported_binary = app_details_data["data"]["node"][
         "release_channels"
     ]["nodes"][0]["latest_supported_binary"]
 
     if latest_supported_binary is not None:
-        app_binary_info_api_url = f"https://graph.oculus.com/graphql?doc=query ($params: AppBinaryInfoArgs!) {{ app_binary_info(args: $params) {{ info {{ binary {{ ... on AndroidBinary {{ id package_name version_code asset_files {{ edges {{ node {{ ... on AssetFile {{ file_name uri size }} }} }} }} }} }} }} }} }}&variables={{\"params\":{{\"app_params\":[{{\"app_id\":\"{oculus_app_id}\",\"version_code\":\"{latest_supported_binary['version_code']}\"}}]}}}}&access_token=OC|1317831034909742|"
+        app_binary_info_variables = {
+            "params": {
+                "app_params": [
+                    {
+                        "app_id": oculus_app_id,
+                        "version_code": latest_supported_binary['version_code']
+                    }
+                ]
+            }
+        }
 
-        app_binary_info_response = session.get(app_binary_info_api_url)
+        app_binary_info_graphql_request_payload = {
+            "doc": "query ($params: AppBinaryInfoArgs!) { app_binary_info(args: $params) { info { binary { ... on AndroidBinary { id package_name version_code asset_files { edges { node { ... on AssetFile { file_name uri size } } } } } } } } }",
+            "variables": json.dumps(app_binary_info_variables),
+            "access_token": "OC|1317831034909742|"
+        }
+
+        app_binary_info_response = session.post("https://graph.oculus.com/graphql",
+                                                json=app_binary_info_graphql_request_payload)
         app_binary_info_data = app_binary_info_response.json()
         package_name = app_binary_info_data["data"]["app_binary_info"]["info"][0]["binary"][
             "package_name"]
