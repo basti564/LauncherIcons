@@ -585,9 +585,9 @@ def fetch_sidequest_apps(existing_sidequest_apps: AppList, existing_oculus_apps:
             image_url = app["image_url"]
 
             if package_name.startswith("com.autogen.") and app["is_labrador"] and app["labrador_url"].startswith(
-                    "https://www.oculus"):
+                    "https://www.oculus.com/experiences/quest/"):
                 labrador_url = app["labrador_url"]
-                oculus_app_id = re.search(r'/quest/(\d+)/', labrador_url).group(1)
+                oculus_app_id = re.search(r'/quest/(\d+)', labrador_url).group(1)
                 store_stuff_variables = {
                     "applicationID": oculus_app_id
                 }
