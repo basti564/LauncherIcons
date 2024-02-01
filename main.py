@@ -115,7 +115,6 @@ def fetch_oculus_apps(existing_apps):
     ]
     app_data = merge_apps(existing_apps, new_apps)
 
-    # Write the updated data to the oculus_apps.json file
     with open("oculus_apps.json", "w") as f:
         json.dump(app_data, f)
 
@@ -202,7 +201,6 @@ def fetch_oculus_apps_with_covers(existing_apps):
 
     merged_apps = merge_apps(existing_apps, new_apps)
 
-    # Write the updated data to the oculus_apps.json file
     with open("oculus_apps.json", "w") as f:
         json.dump(merged_apps, f)
 
@@ -264,14 +262,12 @@ def download_image_webp(url, filename):
     with requests.get(url, stream=True) as response:
         response.raise_for_status()
         image = Image.open(io.BytesIO(response.content))
-        # Convert and save the image in webp format
         image.save(filename, "WEBP")
 
 
 def fetch_viveport_covers(existing_apps):
     logging.info("Fetching Viveport app covers...")
 
-    # Folders for different thumbnail sizes
     small_folder = "viveport_small"
     medium_folder = "viveport_medium"
     large_folder = "viveport_large"
@@ -282,7 +278,6 @@ def fetch_viveport_covers(existing_apps):
     os.makedirs(large_folder, exist_ok=True)
     os.makedirs(square_folder, exist_ok=True)
 
-    # GraphQL query and variables
     graphql_query = """
     query getProduct(
     $category_id: String
@@ -322,7 +317,6 @@ def fetch_viveport_covers(existing_apps):
     graphql_url = "https://www.viveport.com/graphql"
     headers = {"Content-Type": "application/json"}
 
-    # Fetch app IDs
     app_ids = []
     while True:
         response = session.post(
@@ -344,7 +338,6 @@ def fetch_viveport_covers(existing_apps):
 
         graphql_variables["currentPage"] += 1
 
-    # Fetch and download app covers
     new_apps = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
         for app_id in app_ids:
@@ -406,7 +399,6 @@ def fetch_viveport_covers(existing_apps):
 def fetch_vive_business_covers(existing_apps):
     logging.info("Fetching Vive Business app covers...")
 
-    # Folders for different thumbnail sizes
     small_folder = "vive_business_small"
     medium_folder = "vive_business_medium"
     large_folder = "vive_business_large"
@@ -417,7 +409,6 @@ def fetch_vive_business_covers(existing_apps):
     os.makedirs(large_folder, exist_ok=True)
     os.makedirs(square_folder, exist_ok=True)
 
-    # GraphQL query and variables
     graphql_query = """
     query getProductAll($pageSize: Int, $currentPage: Int) {
       products(filter: {}, pageSize: $pageSize, currentPage: $currentPage) {
@@ -439,7 +430,6 @@ def fetch_vive_business_covers(existing_apps):
     graphql_url = "https://business.vive.com/graphql"
     headers = {"Content-Type": "application/json"}
 
-    # Fetch app IDs
     app_ids = []
     while True:
         response = requests.post(
@@ -465,7 +455,6 @@ def fetch_vive_business_covers(existing_apps):
 
         graphql_variables["currentPage"] += 1
 
-    # Fetch and download app covers
     new_apps = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
         for app_id in app_ids:
