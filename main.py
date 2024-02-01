@@ -204,7 +204,32 @@ def fetch_oculus_apps_with_covers(existing_apps: AppList) -> None:
                         }
 
                         app_binary_info_payload = {
-                            "doc": "query ($params: AppBinaryInfoArgs!) { app_binary_info(args: $params) { info { binary { ... on AndroidBinary { id package_name version_code asset_files { edges { node { ... on AssetFile { file_name uri size } } } } } } } } }",
+                            "doc": """
+                                query ($params: AppBinaryInfoArgs!) {
+                                    app_binary_info(args: $params) {
+                                        info {
+                                            binary {
+                                                ... on AndroidBinary {
+                                                    id
+                                                    package_name
+                                                    version_code
+                                                    asset_files {
+                                                        edges {
+                                                            node {
+                                                                ... on AssetFile {
+                                                                    file_name
+                                                                    uri
+                                                                    size
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            """,
                             "variables": json.dumps(app_binary_info_variables),
                             "access_token": "OC|1317831034909742|"
                         }
@@ -389,31 +414,31 @@ def fetch_viveport_covers(existing_apps: AppList) -> None:
     os.makedirs(square_folder, exist_ok=True)
 
     graphql_query = """
-    query getProduct(
-    $category_id: String
-    $app_type: [String]
-    $prod_type: [String]
-    $pageSize: Int
-    $currentPage: Int
-    ) {
-    products(
-        filter: {
-        category_id: { eq: $category_id }
-        app_type: { in: $app_type }
-        prod_type: { in: $prod_type }
+        query getProduct(
+            $category_id: String,
+            $app_type: [String],
+            $prod_type: [String],
+            $pageSize: Int,
+            $currentPage: Int
+        ) {
+            products(
+                filter: {
+                    category_id: { eq: $category_id }
+                    app_type: { in: $app_type }
+                    prod_type: { in: $prod_type }
+                },
+                pageSize: $pageSize,
+                currentPage: $currentPage
+            ) {
+                total_count
+                page_info {
+                    total_pages
+                }
+                items {
+                    sku
+                }
+            }
         }
-        pageSize: $pageSize
-        currentPage: $currentPage
-    ) {
-        total_count
-        page_info {
-        total_pages
-        }
-        items {
-        sku
-        }
-    }
-    }
     """
 
     graphql_variables = {
@@ -490,19 +515,19 @@ def fetch_vive_business_covers(existing_apps: AppList) -> None:
     os.makedirs(square_folder, exist_ok=True)
 
     graphql_query = """
-    query getProductAll($pageSize: Int, $currentPage: Int) {
-      products(filter: {}, pageSize: $pageSize, currentPage: $currentPage) {
-        total_count
-        page_info {
-          total_pages
+        query getProductAll($pageSize: Int, $currentPage: Int) {
+            products(filter: {}, pageSize: $pageSize, currentPage: $currentPage) {
+                total_count
+                page_info {
+                    total_pages
+                }
+                items {
+                    sku
+                    deviceType
+                }
+                __typename
+            }
         }
-        items {
-          sku
-          deviceType
-        }
-        __typename
-      }
-    }
     """
 
     graphql_variables = {"pageSize": 9999, "currentPage": 1}
@@ -572,13 +597,13 @@ def fetch_oculus_app_details_and_download_covers(oculus_app_id: str) -> App:
     store_stuff_variables = {
         "applicationID": oculus_app_id
     }
-    store_stuff_graphql_request_payload = {
+    store_stuff_payload = {
         "doc_id": "8571881679548867",
         "access_token": "OC|1076686279105243|",
         "variables": json.dumps(store_stuff_variables)
     }
     store_stuff_response = session.post("https://graph.oculus.com/graphql",
-                                        data=store_stuff_graphql_request_payload)
+                                        data=store_stuff_payload)
     store_stuff_data = store_stuff_response.json()
 
     app_name = store_stuff_data["data"]["node"]["display_name"]
@@ -586,14 +611,14 @@ def fetch_oculus_app_details_and_download_covers(oculus_app_id: str) -> App:
     app_details_variables = {
         "applicationID": oculus_app_id
     }
-    app_details_graphql_request_payload = {
+    app_details_payload = {
         "doc_id": "3828663700542720",
         "access_token": "OC|1076686279105243|",
         "variables": json.dumps(app_details_variables)
     }
 
     app_details_response = session.post("https://graph.oculus.com/graphql",
-                                        data=app_details_graphql_request_payload)
+                                        data=app_details_payload)
     app_details_data = app_details_response.json()
     latest_supported_binary = app_details_data["data"]["node"][
         "release_channels"
@@ -611,14 +636,38 @@ def fetch_oculus_app_details_and_download_covers(oculus_app_id: str) -> App:
             }
         }
 
-        app_binary_info_graphql_request_payload = {
-            "doc": "query ($params: AppBinaryInfoArgs!) { app_binary_info(args: $params) { info { binary { ... on AndroidBinary { id package_name version_code asset_files { edges { node { ... on AssetFile { file_name uri size } } } } } } } } }",
+        app_binary_info_payload = {
+            "doc": """
+                query ($params: AppBinaryInfoArgs!) {
+                    app_binary_info(args: $params) {
+                        info {
+                            binary {
+                                ... on AndroidBinary {
+                                    id
+                                    package_name
+                                    version_code
+                                    asset_files {
+                                        edges {
+                                            node {
+                                                ... on AssetFile {
+                                                    file_name
+                                                    uri
+                                                    size
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            """,
             "variables": json.dumps(app_binary_info_variables),
             "access_token": "OC|1317831034909742|"
         }
-
         app_binary_info_response = session.post("https://graph.oculus.com/graphql",
-                                                json=app_binary_info_graphql_request_payload)
+                                                json=app_binary_info_payload)
         app_binary_info_data = app_binary_info_response.json()
         package_name = app_binary_info_data["data"]["app_binary_info"]["info"][0]["binary"][
             "package_name"]
