@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
-from typing import NamedTuple, List, Dict, Optional, Callable
+from typing import NamedTuple, List, Dict, Optional, Callable, Set
 import json
 import logging
 import os
@@ -58,6 +58,13 @@ def merge_apps(existing_apps: AppList, new_apps: AppList) -> AppList:
     return merged_data
 
 
+def merge_app_ids(*id_lists: List[str]) -> List[str]:
+    merged_ids = set()
+    for id_list in id_lists:
+        merged_ids.update(id_list)
+    return list(merged_ids)
+
+
 def download_image(url: str, filename: str, retries: int = 3, timeout: int = 5) -> None:
     if not url or not url.startswith(('http://', 'https://')):
         logging.warning(f"Invalid or missing URL for {filename}, skipping download.")
@@ -109,8 +116,8 @@ def fetch_apps_concurrently(app_ids: List[str], fetch_function: Callable[[str], 
     return results
 
 
-def fetch_oculusdb_apps(existing_apps: AppList) -> None:
-    logging.info("Fetching Oculus apps...")
+def fetch_oculusdb_apps() -> AppList:
+    logging.info("Fetching OculusDB apps...")
     oculus_options = {
         "url": "https://oculusdb.rui2015.me/api/v1/allapps",
         "method": "GET",
@@ -129,9 +136,9 @@ def fetch_oculusdb_apps(existing_apps: AppList) -> None:
         if app.get("packageName") and "rift" not in app.get("packageName")
     ]
 
-    dump_to_file("oculus_apps.json", merge_apps(existing_apps, new_apps))
+    logging.info("OculusDB apps fetched successfully.")
 
-    logging.info("Oculus apps fetched successfully.")
+    return new_apps
 
 
 def fetch_oculus_section_items(section_id: str) -> list:
@@ -155,7 +162,7 @@ def fetch_oculus_section_items(section_id: str) -> list:
     return app_ids
 
 
-def fetch_oculus_apps_with_covers(existing_apps: AppList) -> None:
+def fetch_oculus_items() -> list:
     logging.info("Fetching Oculus apps...")
 
     section_ids = ["1888816384764129", "174868819587665"]
@@ -164,11 +171,9 @@ def fetch_oculus_apps_with_covers(existing_apps: AppList) -> None:
     for section_id in section_ids:
         app_ids.extend([node['id'] for node in fetch_oculus_section_items(section_id)])
 
-    new_apps = fetch_apps_concurrently(app_ids, download_oculus_app_covers_by_id)
-
-    dump_to_file("oculus_apps.json", merge_apps(existing_apps, new_apps))
-
     logging.info("Oculus apps fetched successfully.")
+
+    return app_ids
 
 
 def download_oculus_app_covers_by_id(oculus_app_id: str) -> App | None:
@@ -287,7 +292,7 @@ def download_oculus_app_covers_by_id(oculus_app_id: str) -> App | None:
     return App(appName=app_name, packageName=package_name, id=oculus_app_id)
 
 
-def fetch_sidequest_apps(sidequest_app_data: AppList, oculus_app_data: AppList):
+def fetch_sidequest_apps() -> list:
     logging.info("Fetching Sidequest apps...")
     sidequest_folder = "sidequest_image"
     os.makedirs(sidequest_folder, exist_ok=True)
@@ -351,15 +356,12 @@ def fetch_sidequest_apps(sidequest_app_data: AppList, oculus_app_data: AppList):
             # download_image(image_url, image_path)
             # logging.info(f"Downloaded image for {app_name}")
 
-    fetch_apps_concurrently(new_oculus_app_ids, download_oculus_app_covers_by_id)
-
-    merged_sidequest_apps = merge_apps(sidequest_app_data, new_apps)
-    dump_to_file("sidequest_apps.json", merged_sidequest_apps)
-
-    merged_oculus_apps = merge_apps(oculus_app_data, new_apps)
-    dump_to_file("oculus_apps.json", merged_oculus_apps)
+    # merged_sidequest_apps = merge_apps(sidequest_app_data, new_apps)
+    # dump_to_file("sidequest_apps.json", merged_sidequest_apps)
 
     logging.info("Sidequest apps fetched successfully.")
+
+    return new_oculus_app_ids
 
 
 def fetch_pico_apps(existing_apps: AppList) -> AppList:
@@ -688,16 +690,21 @@ def fetch_vive_business_covers(existing_apps: AppList) -> None:
 
 
 if __name__ == "__main__":
+    existing_oculus_apps = load_from_file("oculus_apps.json")
+    oculusdb_apps = fetch_oculusdb_apps()
+    oculus_ids = fetch_oculus_items()
+    sidequest_oculus_ids = fetch_sidequest_apps()
+
+    all_app_ids = merge_app_ids([app.id for app in existing_oculus_apps], [app.id for app in oculusdb_apps], oculus_ids,
+                                sidequest_oculus_ids)
+
+    new_oculus_apps = fetch_apps_concurrently(all_app_ids, download_oculus_app_covers_by_id)
+    merged_oculus_apps = merge_apps(existing_oculus_apps, new_oculus_apps)
+    dump_to_file("oculus_apps.json", merged_oculus_apps)
+
     existing_pico_apps = load_from_file("pico_apps.json")
     app_data = fetch_pico_apps(existing_pico_apps)
     fetch_pico_covers(app_data)
-
-    existing_oculus_apps = load_from_file("oculus_apps.json")
-    fetch_oculus_apps_with_covers(existing_oculus_apps)
-
-    existing_oculus_apps = load_from_file("oculus_apps.json")
-    existing_sidequest_apps = load_from_file("sidequest_apps.json")
-    fetch_sidequest_apps(existing_sidequest_apps, existing_oculus_apps)
 
     existing_viveport_apps = load_from_file("viveport_apps.json")
     fetch_viveport_covers(existing_viveport_apps)
