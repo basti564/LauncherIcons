@@ -187,6 +187,16 @@ def download_oculus_app_covers_by_id(oculus_app_id: str) -> App | None:
     os.makedirs(square_folder, exist_ok=True)
     os.makedirs(icon_folder, exist_ok=True)
 
+    folder_mapping = {
+        "APP_IMG_COVER_LANDSCAPE": landscape_folder,
+        "APP_IMG_COVER_SQUARE": square_folder,
+        "APP_IMG_COVER_PORTRAIT": portrait_folder,
+        "APP_IMG_HERO": None,
+        "APP_IMG_ICON": icon_folder,
+        "APP_IMG_SMALL_LANDSCAPE": None,
+        "APP_IMG_LOGO_TRANSPARENT": None
+    }
+
     store_stuff_variables = {"applicationID": oculus_app_id}
     store_stuff_payload = {
         "doc_id": "8571881679548867",
@@ -268,24 +278,9 @@ def download_oculus_app_covers_by_id(oculus_app_id: str) -> App | None:
     for translation in translations:
         if translation["locale"] == "en_US":
             for image in translation["images"]["nodes"]:
-                folder = ""
-                match image["image_type"]:
-                    case "APP_IMG_COVER_LANDSCAPE":
-                        folder = landscape_folder
-                    case "APP_IMG_COVER_SQUARE":
-                        folder = square_folder
-                    case "APP_IMG_COVER_PORTRAIT":
-                        folder = portrait_folder
-                    case "APP_IMG_HERO":
-                        pass
-                    case "APP_IMG_ICON":
-                        folder = icon_folder
-                    case "APP_IMG_SMALL_LANDSCAPE":
-                        pass
-                    case "APP_IMG_LOGO_TRANSPARENT":
-                        pass
-                    case _:
-                        pass
+                image_type = image["image_type"]
+                folder = folder_mapping.get(image_type, None)
+
                 if folder:
                     image_path = os.path.join(folder, f"{package_name}.jpg")
                     download_image(image["uri"], image_path)
