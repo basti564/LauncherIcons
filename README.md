@@ -5,6 +5,7 @@ Repo for Pico, Oculus, Viveport and Vive Business Launcher Icons
 - pico_landscape
 - pico_square
 ### Oculus
+- oculus_icon
 - oculus_landscape
 - oculus_square
 - oculus_portrait
