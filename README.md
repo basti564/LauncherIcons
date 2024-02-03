@@ -20,4 +20,4 @@ Repo for Pico, Oculus, Viveport and Vive Business Launcher Icons
 - vive_business_large
 - vive_business_square
 ## Planned Features
-- download cover images for applab, unlisted and SideQuest apps
+- download cover images for SideQuest apps (implemented, but currently not enabled)
