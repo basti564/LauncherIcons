@@ -276,7 +276,7 @@ def download_oculus_app_covers_by_id(oculus_app_id: str) -> App | None:
     else:
         return  # TODO look into getting the package_name without having a valid binary if that even makes sense
     translations = \
-        store_stuff_data["data"]["node"]["lastRevision"]["nodes"][0]["pdp_metadata"]["translations"]["nodes"]
+        store_stuff_data["data"]["node"]["firstRevision"]["nodes"][0]["pdp_metadata"]["translations"]["nodes"]
     for translation in translations:
         if translation["locale"] == "en_US":
             for image in translation["images"]["nodes"]:
